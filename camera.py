@@ -221,9 +221,22 @@ class Palette:
 
     @staticmethod
     def _deltaE76(c1, c2):
-        c1 = np.array(c1, np.float32)
-        c2 = np.array(c2, np.float32)
-        return float(np.linalg.norm(c1 - c2))
+        # Prefer perceptual ΔE2000 (skimage). Fall back to SciPy euclidean, then NumPy.
+        try:
+            from skimage.color import deltaE_cie2000
+            c1a = np.array(c1, np.float32).reshape(1, 1, 3)
+            c2a = np.array(c2, np.float32).reshape(1, 1, 3)
+            return float(deltaE_cie2000(c1a, c2a)[0, 0])
+        except Exception:
+            try:
+                from scipy.spatial.distance import cdist
+                a = np.asarray([c1], dtype=np.float32)
+                b = np.asarray([c2], dtype=np.float32)
+                return float(cdist(a, b, metric="euclidean")[0, 0])
+            except Exception:
+                c1v = np.array(c1, np.float32)
+                c2v = np.array(c2, np.float32)
+                return float(np.linalg.norm(c1v - c2v))
 
     def classify_lab(self, lab_pixels):
         if len(self.colors) == 0:

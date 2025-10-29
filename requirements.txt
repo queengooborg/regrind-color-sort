@@ -7,3 +7,7 @@ Pillow>=10.0.0
 
 # For system font discovery (cross-platform)
 matplotlib>=3.8.0
+
+# Perceptual color difference (ΔE2000) and fallbacks
+scikit-image>=0.23.0
+scipy>=1.11.0
