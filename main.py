@@ -18,6 +18,9 @@ SETTINGS = {
 	"dL": 18.0,
 	"use_edges": True,
 	"min_area": 1500,
+	"mah_thresh": 3.0,
+	"min_margin": 0.4,
+	"use_mahalanobis": True,
 	"deltaE_thresh": 18.0,
 	"hide_unlabeled": False,
 	"camera_index": 0,
@@ -57,6 +60,9 @@ class SettingsUI:
 			("dL", "float", 1.0),
 			("use_edges", "bool", None),
 			("min_area", "int", 100),
+			("mah_thresh", "float", 0.1),
+			("min_margin", "float", 0.1),
+			("use_mahalanobis", "bool", None),
 			("deltaE_thresh", "float", 1.0),
 			("hide_unlabeled", "bool", None),
 			("palette_path", "str", None),
@@ -213,10 +219,11 @@ def main():
 			match = pal.classify_lab(lab_pixels)
 
 			if match:
-				name, dE, idx = match
+				name, score, idx = match
 				labeled += 1
 				cv2.drawContours(vis, [cnt], -1, (0, 255, 0), 2)
-				draw_label(vis, f"{name} (dE {dE:.1f})", (x, max(20, y - 8)), (0, 255, 0), size=18)
+				metric = "dM" if SETTINGS.get("use_mahalanobis", True) else "dE"
+				draw_label(vis, f"{name} ({metric} {score:.2f})", (x, y), (0, 255, 0), size=18)
 			else:
 				unlabeled += 1
 				if not SETTINGS["hide_unlabeled"]:
