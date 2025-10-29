@@ -178,7 +178,7 @@ def main():
 	input_key = ""
 	settings_ui = SettingsUI()
 
-	cv2.namedWindow("regrind", cv2.WINDOW_NORMAL)
+	cv2.namedWindow("Filament Regrind Color Classifier", cv2.WINDOW_NORMAL)
 
 	while True:
 		frame = grab.read()
@@ -248,7 +248,7 @@ def main():
 		t_last = t_now
 		fps = sum(fps_hist) / len(fps_hist)
 
-		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10))
+		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}   Total:{labeled+unlabeled}"], top_left=(10, 10))
 
 		if ui_mode == "normal":
 			put_panel(vis, [
