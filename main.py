@@ -102,7 +102,7 @@ class SettingsUI:
 		self.text_buf = ""
 
 	def show(self, img):
-		lines = ["SETTINGS (o/esc to close, ↑/↓ navigate, ←/→ change, Enter edit/apply)"]
+		lines = ["SETTINGS (esc to close, ↑/↓ navigate, ←/→ change, Enter edit/apply)"]
 		for i, (k, typ, step) in enumerate(self.fields):
 			val = SETTINGS[k]
 			prefix = "→ " if i == self.idx else "  "
@@ -165,7 +165,7 @@ class SettingsUI:
 				self.text_buf = str(SETTINGS[name])
 				return
 
-		if k in (27, ord('o')):
+		if k == 27:
 			return 'exit'
 
 	def _bump(self, direction, cap_ref):
