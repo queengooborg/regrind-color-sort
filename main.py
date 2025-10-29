@@ -262,25 +262,14 @@ def main():
 			], top_left=(10, 110))
 		if not bg.ready and ui_mode != "exit":
 			put_banner(vis, "BACKGROUND NOT SET   Press [space] on a clean background", (0, 255, 255))
-		if ui_mode == "name":
+		if ui_mode in ["name", "key"]:
 			put_panel(
 				vis,
 				[
 					"NEW PALETTE COLOR",
-					"[enter] confirm   [tab] edit keybind   [esc] cancel",
-					f"Name: {input_name}_",
-					f"Key: {input_key or pal.auto_key(input_name)}"
-				],
-				top_left=(10, 110)
-			)
-		if ui_mode == "key":
-			put_panel(
-				vis,
-				[
-					"NEW PALETTE COLOR",
-					"press ONE key to assign   [enter] auto   [esc] cancel",
-					f"Name: {input_name}",
-					f"Key: {input_key}_"
+					"[enter] confirm   [tab] switch field   [esc] cancel" + ("   [backspace] auto key" if ui_mode == "key" else ""),
+					f"Name: {input_name}{'_' if ui_mode == "name" else ''}",
+					f"Key: {input_key or pal.auto_key(input_name)}{'_' if ui_mode == "key" else ''}"
 				],
 				top_left=(10, 110)
 			)
@@ -322,7 +311,7 @@ def main():
 					if idx is not None:
 						pal.add_sample(idx, lab[labels == largest.get("i")].reshape(-1, 3))
 
-		elif ui_mode == "name":
+		elif ui_mode in ["name", "key"]:
 			if k == 27:
 				ui_mode = "normal"
 				input_name = ""
@@ -336,34 +325,20 @@ def main():
 				input_key = ""
 
 			elif k == 9:
-				ui_mode = "key"
+				ui_mode = "key" if ui_mode == "name" else "name"
 
-			elif k in (8, 127):
-				input_name = input_name[:-1]
+			else:
+				if ui_mode == "name":
+					if k in (8, 127):
+						input_name = input_name[:-1]
 
-			elif 32 <= k < 127:
-				input_name += chr(k)
-
-		elif ui_mode == "key":
-			if k == 27:
-				ui_mode = "normal"
-				input_name = ""
-				input_key = ""
-
-			elif k in (13, 10):
-				name_final = input_name if input_name != "" else f"class_{len(pal.colors) + 1}"
-				pal.add_class_from_pixels(name_final, lab[labels == largest.get("i")].reshape(-1, 3), key=None)
-				ui_mode = "normal"
-				input_name = ""
-				input_key = ""
-
-			elif 32 <= k < 127:
-				input_key = chr(k)
-				name_final = input_name if input_name != "" else f"class_{len(pal.colors) + 1}"
-				pal.add_class_from_pixels(name_final, lab[labels == largest.get("i")].reshape(-1, 3), key=input_key[0])
-				ui_mode = "normal"
-				input_name = ""
-				input_key = ""
+					elif 32 <= k < 127:
+						input_name += chr(k)
+				else:
+					if k in (8, 127):
+						input_key = ""
+					elif 32 <= k < 127:
+						input_key = chr(k)
 
 		elif ui_mode == "settings":
 			if settings_ui.handle_key(k, cap) == 'exit':
