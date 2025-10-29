@@ -8,9 +8,9 @@ import json
 import os
 from collections import deque
 
-from ui import *
-from palette import *
-from bg import *
+from lib.ui import *
+from lib.palette import *
+from lib.bg import *
 
 # ========================= Defaults (changed via Settings panel) =========================
 SETTINGS = {
