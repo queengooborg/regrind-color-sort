@@ -2,6 +2,35 @@
 # Mostly written by ChatGPT
 
 import cv2
+
+from threading import Thread, Lock
+
+class FrameGrabber:
+	def __init__(self, cap):
+		self.cap = cap
+		self.lock = Lock()
+		self.frame = None
+		self.stopped = False
+		self.t = Thread(target=self._loop, daemon=True)
+
+	def start(self):
+		self.t.start()
+		return self
+
+	def _loop(self):
+		while not self.stopped:
+			ok, f = self.cap.read()
+			if not ok:
+				continue
+			with self.lock:
+				self.frame = f
+
+	def read(self):
+		with self.lock:
+			return None if self.frame is None else self.frame.copy()
+
+	def stop(self):
+		self.stopped = True
 import numpy as np
 import time
 import json
@@ -158,6 +187,7 @@ def main():
 	global SETTINGS
 	SETTINGS = SettingsIO.load("settings.json", SETTINGS)
 	cap = cv2.VideoCapture(SETTINGS["camera_index"])
+	grab = FrameGrabber(cap).start()
 
 	if not cap.isOpened():
 		raise SystemExit("Could not open video source (change camera_index in Settings).")
@@ -176,9 +206,9 @@ def main():
 	cv2.namedWindow("regrind", cv2.WINDOW_NORMAL)
 
 	while True:
-		ok, frame = cap.read()
-		if not ok:
-			break
+		frame = grab.read()
+		if frame is None:
+			continue
 
 		if bg is None:
 			H, W = frame.shape[:2]
@@ -235,23 +265,24 @@ def main():
 		t_last = t_now
 		fps = sum(fps_hist) / len(fps_hist)
 
-		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
+		pil_vis, draw = begin_text(vis)
+		put_panel_ctx(pil_vis, draw, vis.shape, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
 
 		if ui_mode == "normal":
-			put_panel(vis, [
+			put_panel_ctx(pil_vis, draw, vis.shape, [
 				"[space] capture BG   [,] settings   [esc] quit",
 				"[.] new class from largest   [key] add sample to that class"
 			], top_left=(10, 50), size=18)
 
-			put_panel(vis, [
+			put_panel_ctx(pil_vis, draw, vis.shape, [
 				"Palette:",
 				*pal.legend()
 			], top_left=(10, 110), size=18)
 		if not bg.ready and ui_mode != "exit":
-			put_banner(vis, "BACKGROUND NOT SET — press [space] on a clean background", (0, 255, 255), size=20)
+			put_banner_ctx(pil_vis, draw, vis.shape, "BACKGROUND NOT SET — press [space] on a clean background", (0, 255, 255), size=20)
 		if ui_mode == "name":
-			put_panel(
-				vis,
+			put_panel_ctx(
+				pil_vis, draw, vis.shape,
 				[
 					"NEW PALETTE COLOR",
 					"[enter] confirm   [tab] edit keybind   [esc] cancel",
@@ -262,8 +293,8 @@ def main():
 				size=18
 			)
 		if ui_mode == "key":
-			put_panel(
-				vis,
+			put_panel_ctx(
+				pil_vis, draw, vis.shape,
 				[
 					"NEW PALETTE COLOR",
 					"press ONE key to assign   [enter] auto   [esc] cancel",
@@ -274,12 +305,13 @@ def main():
 				size=18
 			)
 		if ui_mode == "exit":
-			put_banner(vis, "Save settings and palette? [y]/[n]", (50, 50, 255), size=20)
+			put_banner_ctx(pil_vis, draw, vis.shape, "Save settings and palette? [y]/[n]", (50, 50, 255), size=20)
 
 		if ui_mode == "settings":
 			settings_ui.show(vis)
 			n_lines = 1 + len(settings_ui.fields)
-			put_panel(vis, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines), size=18)
+			put_panel_ctx(pil_vis, draw, vis.shape, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines), size=18)
+		vis = end_text(pil_vis)
 		cv2.imshow("regrind", vis)
 
 		k = cv2.waitKeyEx(1)
@@ -368,6 +400,10 @@ def main():
 					except Exception:
 						pass
 
+				try:
+					grab.stop()
+				except Exception:
+					pass
 				cap.release()
 				cv2.destroyAllWindows()
 				break
