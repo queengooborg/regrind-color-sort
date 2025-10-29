@@ -20,7 +20,6 @@ SETTINGS = {
 	"d_ab": 12.0,
 	"dL": 18.0,
 	"use_edges": True,
-	"update_bg": False,
 	"min_area": 1500,
 	"deltaE_thresh": 18.0,
 	"hide_unlabeled": False,
@@ -377,7 +376,6 @@ class SettingsUI:
 			("d_ab", "float", 1.0),
 			("dL", "float", 1.0),
 			("use_edges", "bool", None),
-			("update_bg", "bool", None),
 			("min_area", "int", 100),
 			("deltaE_thresh", "float", 1.0),
 			("hide_unlabeled", "bool", None),
@@ -506,9 +504,6 @@ def main():
 
 		mask, lab = segment(frame, bg)
 
-		if bg.ready and SETTINGS["update_bg"]:
-			bg.update(lab, mask, alpha=0.02)
-
 		vis = frame.copy()
 
 		num, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
@@ -560,7 +555,7 @@ def main():
 		if ui_mode == "normal":
 			lines = [
 				f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}",
-				"[b] capture BG   [u] adapt BG   [w] save palette   [o] settings   [esc] quit",
+				"[b] capture BG   [w] save palette   [o] settings   [esc] quit",
 				"[n] new class from largest   [key] add sample to that class",
 				"Palette: " + pal.legend()
 			]
@@ -607,9 +602,6 @@ def main():
 				blur = cv2.GaussianBlur(frame, (5, 5), 0)
 				lab0 = cv2.cvtColor(blur, cv2.COLOR_BGR2LAB).astype(np.float32)
 				bg.init_from(lab0)
-
-			if k == ord('u'):
-				SETTINGS["update_bg"] = not SETTINGS["update_bg"]
 
 			if k == ord('w'):
 				pal.save()
