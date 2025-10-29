@@ -237,16 +237,14 @@ def main():
 		t_last = t_now
 		fps = sum(fps_hist) / len(fps_hist)
 
+		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
+
 		if ui_mode == "normal":
-			lines = [
-				f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}",
+			put_panel(vis, [
 				"[space] capture BG   [,] settings   [esc] quit",
 				"[.] new class from largest   [key] add sample to that class",
 				"Palette: " + pal.legend()
-			]
-			put_panel(vis, lines, top_left=(10, 10), size=18)
-		else:
-			put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
+			], top_left=(10, 50), size=18)
 		if not bg.ready and ui_mode != "exit":
 			put_banner(vis, "BACKGROUND NOT SET — press [space] on a clean background", (0, 255, 255), size=20)
 		if ui_mode == "name":
