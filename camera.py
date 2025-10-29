@@ -7,6 +7,15 @@ import time
 import json
 import os
 from collections import deque
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+
+try:
+    from matplotlib import font_manager as _fm
+    _HAS_MPL = True
+except Exception:
+    _HAS_MPL = False
 
 # ========================= Defaults (changed via Settings panel) =========================
 SETTINGS = {
@@ -22,6 +31,91 @@ SETTINGS = {
     "width": 1280,
     "height": 720
 }
+
+# ========================= System font discovery (Unicode) =========================
+_FONT_CACHE = {}
+
+def _find_system_font_path():
+    candidates = [
+        "HelveticaNeue.ttf",
+        "Helvetica Neue.ttf",
+        "SegoeUI.ttf",
+        "Segoe UI.ttf",
+        "Arial.ttf",
+        "Helvetica.ttf",
+        "DejaVuSans.ttf",
+        "NotoSans-Regular.ttf",
+        "FreeSans.ttf",
+        "Apple Color Emoji.ttc",
+        "Arial Unicode.ttf",
+        "NotoSansCJK-Regular.ttc"
+    ]
+    paths = []
+    if _HAS_MPL:
+        try:
+            paths = _fm.findSystemFonts(fontpaths=None, fontext="ttf")
+            paths += _fm.findSystemFonts(fontpaths=None, fontext="ttc")
+        except Exception:
+            paths = []
+    if not paths:
+        common_dirs = []
+        if os.name == "nt":
+            common_dirs = [r"C:\Windows\Fonts"]
+        elif sys.platform == "darwin":
+            common_dirs = ["/System/Library/Fonts", "/Library/Fonts", os.path.expanduser("~/Library/Fonts")]
+        else:
+            common_dirs = ["/usr/share/fonts", "/usr/local/share/fonts", os.path.expanduser("~/.fonts")]
+        for root in common_dirs:
+            if not os.path.isdir(root):
+                continue
+            for dirpath, _, filenames in os.walk(root):
+                for fn in filenames:
+                    if fn.lower().endswith((".ttf", ".ttc", ".otf")):
+                        paths.append(os.path.join(dirpath, fn))
+    paths_lower = [p.lower() for p in paths]
+    for cand in candidates:
+        cl = cand.lower()
+        for p, pl in zip(paths, paths_lower):
+            if cl in pl:
+                return p
+    return None
+
+def get_default_font(size=18):
+    key = f"{size}"
+    if key in _FONT_CACHE:
+        return _FONT_CACHE[key]
+    path = _find_system_font_path()
+    if path is not None:
+        try:
+            font = ImageFont.truetype(path, size)
+            _FONT_CACHE[key] = font
+            return font
+        except Exception:
+            pass
+    font = ImageFont.load_default()
+    _FONT_CACHE[key] = font
+    return font
+
+# ========================= Pillow text helpers =========================
+def _draw_unicode_text(img_bgr, text, org, color=(0, 255, 0), font=None):
+    if font is None:
+        font = get_default_font(18)
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(img_rgb)
+    draw = ImageDraw.Draw(pil_img)
+    draw.text(org, text, font=font, fill=(color[2], color[1], color[0]))
+    res = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    return res
+
+def _measure_text(font, text):
+    if font is None:
+        font = get_default_font(18)
+    img = Image.new("L", (2, 2), 0)
+    draw = ImageDraw.Draw(img)
+    box = draw.textbbox((0, 0), text, font=font)
+    w = box[2] - box[0]
+    h = box[3] - box[1]
+    return w, h
 
 # ========================= Per-pixel Lab BG model =========================
 class PixelBG:
@@ -212,47 +306,44 @@ class Palette:
         c["centroid"][2] = (1 - alpha) * c["centroid"][2] + alpha * b
         c["samples"] = n + 1
 
-# ========================= UI helpers =========================
-def put_panel(img, lines, top_left=(10, 10), pad=8, alpha=0.6, color=(0, 255, 0)):
+# ========================= UI helpers (Unicode text via Pillow) =========================
+def put_panel(img, lines, top_left=(10, 10), pad=8, alpha=0.6, color=(0, 255, 0), size=18):
     x, y = top_left
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    scale = 0.55
-    thick = 1
-    line_gap = 6
-
-    text_sizes = [cv2.getTextSize(ln, font, scale, thick)[0] for ln in lines]
-    if len(text_sizes) == 0:
+    if len(lines) == 0:
         return
-
-    line_h = max(sz[1] for sz in text_sizes) + line_gap
+    font = get_default_font(size)
+    line_gap = 6
+    max_w = 0
+    line_hs = []
+    for ln in lines:
+        w, h = _measure_text(font, ln)
+        max_w = max(max_w, w)
+        line_hs.append(h)
+    line_h = max(line_hs) + line_gap
     total_h = line_h * len(lines)
-    panel_w = max(sz[0] for sz in text_sizes)
-
     overlay = img.copy()
-    cv2.rectangle(overlay, (x - pad, y - pad), (x + panel_w + pad, y + total_h + pad), (0, 0, 0), -1)
+    cv2.rectangle(overlay, (x - pad, y - pad), (x + max_w + pad, y + total_h + pad), (0, 0, 0), -1)
     cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
-
     y_text = y + line_h - line_gap // 2
     for ln in lines:
-        cv2.putText(img, ln, (x, y_text), font, scale, color, 1, cv2.LINE_AA)
+        img[:] = _draw_unicode_text(img, ln, (x, y_text), color=color, font=font)
         y_text += line_h
 
-def put_banner(img, text, color=(0, 255, 255)):
+def put_banner(img, text, color=(0, 255, 255), size=22):
     H, W = img.shape[:2]
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    scale = 0.7
-    thick = 2
-    (tw, th), _ = cv2.getTextSize(text, font, scale, thick)
+    font = get_default_font(size)
+    w, h = _measure_text(font, text)
     pad = 10
-    x = (W - tw) // 2
+    x = (W - w) // 2
     y = 15
     overlay = img.copy()
-    cv2.rectangle(overlay, (x - pad, y), (x + tw + pad, y + th + pad * 2), (0, 0, 0), -1)
+    cv2.rectangle(overlay, (x - pad, y), (x + w + pad, y + h + pad * 2), (0, 0, 0), -1)
     cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
-    cv2.putText(img, text, (x, y + th + pad // 2), font, scale, color, thick, cv2.LINE_AA)
+    img[:] = _draw_unicode_text(img, text, (x, y + h + pad // 2), color=color, font=font)
 
-def draw_label(img, text, org, color=(0, 255, 0)):
-    cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2, cv2.LINE_AA)
+def draw_label(img, text, org, color=(0, 255, 0), size=18):
+    font = get_default_font(size)
+    img[:] = _draw_unicode_text(img, text, org, color=color, font=font)
 
 # ========================= Settings panel (in-window) =========================
 class SettingsUI:
@@ -424,13 +515,12 @@ def main():
                 name, dE, idx = match
                 labeled += 1
                 cv2.drawContours(vis, [cnt], -1, (0, 255, 0), 2)
-                draw_label(vis, f"{name} (dE {dE:.1f})", (x, max(20, y - 8)), (0, 255, 0))
+                draw_label(vis, f"{name} (dE {dE:.1f})", (x, max(20, y - 8)), (0, 255, 0), size=18)
             else:
                 unlabeled += 1
                 if not SETTINGS["hide_unlabeled"]:
                     cv2.drawContours(vis, [cnt], -1, (0, 0, 255), 2)
-                    draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255))
-
+                    draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255), size=18)
         t_now = time.time()
         dt = max(1e-6, t_now - t_last)
         fps_hist.append(1.0 / dt)
@@ -444,13 +534,11 @@ def main():
                 "[n] new class from largest   [key] add sample to that class",
                 "Palette: " + pal.legend()
             ]
-            put_panel(vis, lines, top_left=(10, 10))
+            put_panel(vis, lines, top_left=(10, 10), size=18)
         else:
-            put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10))
-
+            put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
         if not bg.ready:
-            put_banner(vis, "BACKGROUND NOT SET — press [b] on a clean background", (0, 255, 255))
-
+            put_banner(vis, "BACKGROUND NOT SET — press [b] on a clean background", (0, 255, 255), size=20)
         if ui_mode == "name":
             put_panel(
                 vis,
@@ -458,7 +546,8 @@ def main():
                     "NEW CLASS: type name, Enter=confirm, Esc=cancel, Tab=also set key",
                     f"Name: {input_name}"
                 ],
-                top_left=(10, 110)
+                top_left=(10, 110),
+                size=18
             )
 
         if ui_mode == "key":
@@ -468,14 +557,14 @@ def main():
                     f"NEW CLASS '{input_name}': press ONE key to assign, Enter=skip, Esc=cancel",
                     f"Key: {input_key}"
                 ],
-                top_left=(10, 110)
+                top_left=(10, 110),
+                size=18
             )
 
         if ui_mode == "settings":
             settings_ui.show(vis)
             n_lines = 1 + len(settings_ui.fields)
-            put_panel(vis, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines))
-
+            put_panel(vis, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines), size=18)
         cv2.imshow("regrind", vis)
 
         k = cv2.waitKey(1) & 0xFF

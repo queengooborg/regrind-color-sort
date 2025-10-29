@@ -1,3 +1,9 @@
 # Core image and video processing
 opencv-python>=4.10.0
 numpy>=1.26.0
+
+# For Unicode text rendering in UI overlays
+Pillow>=10.0.0
+
+# For system font discovery (cross-platform)
+matplotlib>=3.8.0
