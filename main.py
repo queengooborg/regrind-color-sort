@@ -20,6 +20,7 @@ SETTINGS = {
 	"min_area": 1500,
 	"deltaE_thresh": 18.0,
 	"hide_unlabeled": False,
+	"hide_largest": False,
 	"camera_index": 0,
 	"palette_path": "palette.json"
 }
@@ -59,6 +60,7 @@ class SettingsUI:
 			("min_area", "int", 100),
 			("deltaE_thresh", "float", 1.0),
 			("hide_unlabeled", "bool", None),
+			("hide_largest", "bool", None),
 			("palette_path", "str", None),
 			("camera_index", "int", 1)
 		]
@@ -215,11 +217,18 @@ def main():
 			if match:
 				name, dE, idx = match
 				labeled += 1
+
+				if i == largest_i and not SETTINGS["hide_largest"]:
+					cv2.drawContours(vis, [cnt], -1, (255, 127, 127), 4)
+
 				cv2.drawContours(vis, [cnt], -1, (0, 255, 0), 2)
 				draw_label(vis, f"{name} (dE {dE:.1f})", (x, max(20, y - 8)), (0, 255, 0), size=18)
 			else:
 				unlabeled += 1
 				if not SETTINGS["hide_unlabeled"]:
+					if i == largest_i and not SETTINGS["hide_largest"]:
+						cv2.drawContours(vis, [cnt], -1, (255, 127, 127), 4)
+
 					cv2.drawContours(vis, [cnt], -1, (0, 0, 255), 2)
 					draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255), size=18)
 		t_now = time.time()
