@@ -2,8 +2,16 @@
 # Mostly written by ChatGPT
 
 import cv2
-
+import numpy as np
+import time
+import json
+import os
+from collections import deque
 from threading import Thread, Lock
+
+from lib.ui import *
+from lib.palette import *
+from lib.bg import *
 
 class FrameGrabber:
 	def __init__(self, cap):
@@ -31,15 +39,6 @@ class FrameGrabber:
 
 	def stop(self):
 		self.stopped = True
-import numpy as np
-import time
-import json
-import os
-from collections import deque
-
-from lib.ui import *
-from lib.palette import *
-from lib.bg import *
 
 # ========================= Defaults (changed via Settings panel) =========================
 SETTINGS = {
