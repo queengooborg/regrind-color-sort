@@ -51,13 +51,13 @@ class Palette:
 
 	def legend(self):
 		if not self.colors:
-			return "(empty)"
+			return ["(empty)"]
 		parts = []
 		for c in self.colors:
 			key = c.get("key")
 			name = c.get("name", "?")
-			parts.append(f"{key}:{name}" if key else f"•:{name}")
-		return ", ".join(parts)
+			parts.append(f"{key}: {name}" if key else f"•: {name}")
+		return parts
 
 	def key_to_index(self, k):
 		for i, c in enumerate(self.colors):

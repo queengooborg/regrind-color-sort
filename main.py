@@ -240,9 +240,13 @@ def main():
 		if ui_mode == "normal":
 			put_panel(vis, [
 				"[space] capture BG   [,] settings   [esc] quit",
-				"[.] new class from largest   [key] add sample to that class",
-				"Palette: " + pal.legend()
+				"[.] new class from largest   [key] add sample to that class"
 			], top_left=(10, 50), size=18)
+
+			put_panel(vis, [
+				"Palette:",
+				*pal.legend()
+			], top_left=(10, 110), size=18)
 		if not bg.ready and ui_mode != "exit":
 			put_banner(vis, "BACKGROUND NOT SET — press [space] on a clean background", (0, 255, 255), size=20)
 		if ui_mode == "name":
