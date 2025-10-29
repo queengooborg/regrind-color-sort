@@ -391,7 +391,7 @@ class SettingsUI:
 		self.text_buf = ""
 
 	def show(self, img):
-		lines = ["SETTINGS (o to close, arrows navigate, ←/→ change, Enter edit/apply)"]
+		lines = ["SETTINGS (o/esc to close, ↑/↓ navigate, ←/→ change, Enter edit/apply)"]
 		for i, (k, typ, step) in enumerate(self.fields):
 			val = SETTINGS[k]
 			prefix = "→ " if i == self.idx else "  "
@@ -405,6 +405,8 @@ class SettingsUI:
 	def handle_key(self, k, cap_ref):
 		kchar = chr(k) if 32 <= k < 127 else None
 		name, typ, step = self.fields[self.idx]
+
+		# text edit mode
 		if self.editing_text:
 			if k == 27:
 				self.editing_text = False
@@ -422,21 +424,28 @@ class SettingsUI:
 			if kchar:
 				self.text_buf += kchar
 			return
-		if k == ord('o'):
-			return
-		if k in (82, ord('k')):
+
+		# navigation keys
+		is_up = k in (82, 63232, 2490368)
+		is_down = k in (84, 63233, 2621440)
+		is_left = k in (81, 63234, 2424832)
+		is_right = k in (83, 63235, 2555904)
+
+		if is_up:
 			self.idx = (self.idx - 1) % len(self.fields)
 			return
-		if k in (84, ord('j')):
+		if is_down:
 			self.idx = (self.idx + 1) % len(self.fields)
 			return
-		if k in (81, ord('h')):
+		if is_left:
 			self._bump(-1, cap_ref)
 			return
-		if k in (83, ord('l')):
+		if is_right:
 			self._bump(+1, cap_ref)
 			return
-		if k in (13, 10):
+
+		# toggle / edit
+		if k in (13, 10) or is_right:
 			if typ == "bool":
 				SETTINGS[name] = not SETTINGS[name]
 				return
@@ -444,6 +453,9 @@ class SettingsUI:
 				self.editing_text = True
 				self.text_buf = str(SETTINGS[name])
 				return
+
+		if k in (27, ord('o')):
+			return 'exit'
 
 	def _bump(self, direction, cap_ref):
 		name, typ, step = self.fields[self.idx]
@@ -548,7 +560,7 @@ def main():
 		if ui_mode == "normal":
 			lines = [
 				f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}",
-				"[b] capture BG   [u] adapt BG   [w] save palette   [o] settings   [q] quit",
+				"[b] capture BG   [u] adapt BG   [w] save palette   [o] settings   [esc] quit",
 				"[n] new class from largest   [key] add sample to that class",
 				"Palette: " + pal.legend()
 			]
@@ -584,9 +596,11 @@ def main():
 			n_lines = 1 + len(settings_ui.fields)
 			put_panel(vis, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines), size=18)
 		cv2.imshow("regrind", vis)
-		k = cv2.waitKey(1) & 0xFF
+
+		k = cv2.waitKeyEx(1)
+
 		if ui_mode == "normal":
-			if k in (27, ord('q')):
+			if k == 27:
 				break
 
 			if k == ord('b'):
@@ -663,10 +677,8 @@ def main():
 				input_key = ""
 
 		elif ui_mode == "settings":
-			if k in (27, ord('o')):
+			if settings_ui.handle_key(k, cap) == 'exit':
 				ui_mode = "normal"
-			else:
-				settings_ui.handle_key(k, cap)
 
 	cap.release()
 	cv2.destroyAllWindows()
