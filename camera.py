@@ -231,7 +231,7 @@ def main():
 		if ui_mode == "normal":
 			lines = [
 				f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}",
-				"[space] capture BG  [,] settings   [esc] quit",
+				"[space] capture BG   [,] settings   [esc] quit",
 				"[.] new class from largest   [key] add sample to that class",
 				"Palette: " + pal.legend()
 			]
@@ -244,8 +244,10 @@ def main():
 			put_panel(
 				vis,
 				[
-					"NEW CLASS: type name, Enter=confirm, Esc=cancel, Tab=also set key",
-					f"Name: {input_name}"
+					"NEW PALETTE COLOR",
+					"[enter] confirm   [tab] edit keybind   [esc] cancel",
+					f"Name: {input_name}▌",
+					f"Key: {input_key or pal.auto_key(input_name)}"
 				],
 				top_left=(10, 110),
 				size=18
@@ -254,14 +256,16 @@ def main():
 			put_panel(
 				vis,
 				[
-					f"NEW CLASS '{input_name}': press ONE key to assign, Enter=skip, Esc=cancel",
-					f"Key: {input_key}"
+					"NEW PALETTE COLOR",
+					"press ONE key to assign   [enter] auto   [esc] cancel",
+					f"Name: {input_name}",
+					f"Key: {input_key}▌"
 				],
 				top_left=(10, 110),
 				size=18
 			)
 		if ui_mode == "exit":
-			put_banner(vis, "Save changes? [y]/[n]", (0, 0, 255), size=20)
+			put_banner(vis, "Save settings and palette? [y]/[n]", (50, 50, 255), size=20)
 
 		if ui_mode == "settings":
 			settings_ui.show(vis)

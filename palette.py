@@ -2,8 +2,6 @@ import os
 import json
 import numpy as np
 
-KEY_POOL = list("1234567890-=[];'")
-
 class Palette:
 	def __init__(self, settings):
 		self.settings = settings
@@ -46,11 +44,11 @@ class Palette:
 				return i
 		return None
 
-	def auto_key(self):
+	def auto_key(self, name):
 		used = {c.get("key") for c in self.colors if c.get("key")}
-		for k in KEY_POOL:
-			if k not in used:
-				return k
+		for l in list(name.lower()) + list("1234567890-=[]\\;'/`"):
+			if l not in used:
+				return l
 		return None
 
 	@staticmethod
@@ -113,7 +111,7 @@ class Palette:
 		b = float(np.median(lab_pixels[:, 2]))
 
 		if key is None or len(key) == 0:
-			key = self.auto_key()
+			key = self.auto_key(name)
 
 		entry = {
 			"name": name,
