@@ -18,11 +18,34 @@ SETTINGS = {
 	"min_area": 1500,
 	"deltaE_thresh": 18.0,
 	"hide_unlabeled": False,
-	"palette_path": "palette.json",
 	"camera_index": 0,
-	"width": 1280,
-	"height": 720
+	"palette_path": "palette.json"
 }
+
+class SettingsIO:
+	@staticmethod
+	def load(path, defaults):
+		import json, os
+		if not os.path.exists(path):
+			return defaults.copy()
+		try:
+			with open(path, "r", encoding="utf-8") as f:
+				data = json.load(f)
+		except Exception:
+			return defaults.copy()
+		out = defaults.copy()
+		for k, v in data.items():
+			if k in out:
+				out[k] = v
+		return out
+
+	@staticmethod
+	def save(path, settings):
+		import json, os
+		tmp = f"{path}.tmp"
+		with open(tmp, "w", encoding="utf-8") as f:
+			json.dump(settings, f, indent=2)
+		os.replace(tmp, path)
 
 # ========================= Per-pixel Lab BG model =========================
 class PixelBG:
@@ -237,9 +260,7 @@ class SettingsUI:
 			("deltaE_thresh", "float", 1.0),
 			("hide_unlabeled", "bool", None),
 			("palette_path", "str", None),
-			("camera_index", "int", 1),
-			("width", "int", 16),
-			("height", "int", 16)
+			("camera_index", "int", 1)
 		]
 		self.idx = 0
 		self.editing_text = False
@@ -328,9 +349,9 @@ class SettingsUI:
 
 # ========================= Main =========================
 def main():
+	global SETTINGS
+	SETTINGS = SettingsIO.load("settings.json", SETTINGS)
 	cap = cv2.VideoCapture(SETTINGS["camera_index"])
-	cap.set(cv2.CAP_PROP_FRAME_WIDTH, SETTINGS["width"])
-	cap.set(cv2.CAP_PROP_FRAME_HEIGHT, SETTINGS["height"])
 
 	if not cap.isOpened():
 		raise SystemExit("Could not open video source (change camera_index in Settings).")
@@ -419,7 +440,7 @@ def main():
 			put_panel(vis, lines, top_left=(10, 10), size=18)
 		else:
 			put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
-		if not bg.ready:
+		if not bg.ready and ui_mode != "exit":
 			put_banner(vis, "BACKGROUND NOT SET — press [b] on a clean background", (0, 255, 255), size=20)
 		if ui_mode == "name":
 			put_panel(
@@ -431,7 +452,6 @@ def main():
 				top_left=(10, 110),
 				size=18
 			)
-
 		if ui_mode == "key":
 			put_panel(
 				vis,
@@ -442,6 +462,8 @@ def main():
 				top_left=(10, 110),
 				size=18
 			)
+		if ui_mode == "exit":
+			put_banner(vis, "Save changes? [y]/[n]", (0, 0, 255), size=20)
 
 		if ui_mode == "settings":
 			settings_ui.show(vis)
@@ -453,16 +475,12 @@ def main():
 
 		if ui_mode == "normal":
 			if k == 27:
-				break
+				ui_mode = "exit"
 
 			if k == ord('b'):
 				blur = cv2.GaussianBlur(frame, (5, 5), 0)
 				lab0 = cv2.cvtColor(blur, cv2.COLOR_BGR2LAB).astype(np.float32)
 				bg.init_from(lab0)
-
-			if k == ord('w'):
-				pal.save()
-				print(f"Palette saved to {pal.path}")
 
 			if k == ord('o'):
 				ui_mode = "settings"
@@ -529,8 +547,19 @@ def main():
 			if settings_ui.handle_key(k, cap) == 'exit':
 				ui_mode = "normal"
 
-	cap.release()
-	cv2.destroyAllWindows()
+		elif ui_mode == "exit":
+			if k in (ord('y'), ord('n')):
+				if k == ord('y'):
+					try:
+						SettingsIO.save("settings.json", SETTINGS)
+						pal.save()
+					except Exception:
+						pass
+
+				cap.release()
+				cv2.destroyAllWindows()
+				break
+
 
 if __name__ == "__main__":
 	main()
