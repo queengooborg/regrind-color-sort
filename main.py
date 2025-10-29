@@ -7,13 +7,14 @@ import time
 import json
 import os
 from collections import deque
+from cv2_enumerate_cameras import enumerate_cameras
 
 from lib.ui import *
 from lib.palette import *
 from lib.bg import *
 from lib.framegrabber import *
 
-# ========================= Defaults (changed via Settings panel) =========================
+# ========================= Settings =========================
 SETTINGS = {
 	"d_ab": 12.0,
 	"dL": 18.0,
@@ -24,7 +25,7 @@ SETTINGS = {
 	"use_mahalanobis": True,
 	"deltaE_thresh": 18.0,
 	"hide_unlabeled": False,
-	"camera_index": 0,
+	"camera": 0,
 	"palette_path": "palette.json"
 }
 
@@ -67,11 +68,12 @@ class SettingsUI:
 			("deltaE_thresh", "float", 1.0),
 			("hide_unlabeled", "bool", None),
 			("palette_path", "str", None),
-			("camera_index", "int", 1)
+			("camera", "int", 1)
 		]
 		self.idx = 0
 		self.editing_text = False
 		self.text_buf = ""
+		self.cameras = enumerate_cameras()
 
 	def show(self, img):
 		lines = [
@@ -81,7 +83,9 @@ class SettingsUI:
 		for i, (k, typ, step) in enumerate(self.fields):
 			val = SETTINGS[k]
 			prefix = "> " if i == self.idx else "  "
-			if self.editing_text and i == self.idx and typ == "str":
+			if k == "camera":
+				val_str = self.cameras[val].name
+			elif self.editing_text and i == self.idx and typ == "str":
 				val_str = f"{self.text_buf}_"
 			else:
 				val_str = str(val)
@@ -148,6 +152,16 @@ class SettingsUI:
 		if typ == "bool":
 			SETTINGS[name] = not SETTINGS[name]
 			return
+		if name == "camera":
+			print(name, typ, step)
+			delta = (step or 1) * direction
+			val = SETTINGS[name] + delta
+			if val < 0:
+				val = len(self.cameras) - 1
+			if val >= len(self.cameras):
+				val = 0
+			SETTINGS[name] = val
+			return
 		if typ in ("int", "float"):
 			delta = (step or 1) * direction
 			if typ == "int":
@@ -161,11 +175,11 @@ class SettingsUI:
 def main():
 	global SETTINGS
 	SETTINGS = SettingsIO.load("settings.json", SETTINGS)
-	cap = cv2.VideoCapture(SETTINGS["camera_index"])
+	cap = cv2.VideoCapture(SETTINGS["camera"])
 	grab = FrameGrabber(cap).start()
 
 	if not cap.isOpened():
-		raise SystemExit("Could not open video source (change camera_index in Settings).")
+		raise SystemExit("Could not open video source (change camera in Settings).")
 
 	pal = Palette(SETTINGS)
 
@@ -282,6 +296,7 @@ def main():
 			put_panel(vis, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines))
 		cv2.imshow("regrind", vis)
 
+		# Handle keyboard inputs
 		k = cv2.waitKeyEx(1)
 
 		if ui_mode == "normal":
