@@ -99,7 +99,7 @@ def segment(frame_bgr, bg):
 	return mask, lab
 
 # ========================= Palette manager (empty by default) =========================
-KEY_POOL = list("1234567890-=[];',.")
+KEY_POOL = list("1234567890-=[];'")
 
 class Palette:
 	def __init__(self, path=None):
@@ -433,15 +433,15 @@ def main():
 		if ui_mode == "normal":
 			lines = [
 				f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}",
-				"[b] capture BG   [w] save palette   [o] settings   [esc] quit",
-				"[n] new class from largest   [key] add sample to that class",
+				"[space] capture BG  [,] settings   [esc] quit",
+				"[.] new class from largest   [key] add sample to that class",
 				"Palette: " + pal.legend()
 			]
 			put_panel(vis, lines, top_left=(10, 10), size=18)
 		else:
 			put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
 		if not bg.ready and ui_mode != "exit":
-			put_banner(vis, "BACKGROUND NOT SET — press [b] on a clean background", (0, 255, 255), size=20)
+			put_banner(vis, "BACKGROUND NOT SET — press [space] on a clean background", (0, 255, 255), size=20)
 		if ui_mode == "name":
 			put_panel(
 				vis,
@@ -477,15 +477,15 @@ def main():
 			if k == 27:
 				ui_mode = "exit"
 
-			if k == ord('b'):
+			if k == ord(' '):
 				blur = cv2.GaussianBlur(frame, (5, 5), 0)
 				lab0 = cv2.cvtColor(blur, cv2.COLOR_BGR2LAB).astype(np.float32)
 				bg.init_from(lab0)
 
-			if k == ord('o'):
+			if k == ord(','):
 				ui_mode = "settings"
 
-			if k == ord('n') and largest_i is not None:
+			if k == ord('.') and largest_i is not None:
 				ui_mode = "name"
 				input_name = ""
 				input_key = ""
