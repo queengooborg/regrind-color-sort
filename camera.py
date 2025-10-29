@@ -7,9 +7,7 @@ import time
 import json
 import os
 from collections import deque
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
 try:
 	from matplotlib import font_manager as _fm
@@ -97,25 +95,28 @@ def get_default_font(size=18):
 	return font
 
 # ========================= Pillow text helpers =========================
+def _text_bbox(font, text):
+	img = Image.new("L", (2, 2), 0)
+	draw = ImageDraw.Draw(img)
+	# bbox = (left, top, right, bottom), top may be negative
+	return draw.textbbox((0, 0), text, font=font)
+
+def _measure_text(font, text):
+	l, t, r, b = _text_bbox(font, text)
+	return r - l, b - t
+
 def _draw_unicode_text(img_bgr, text, org, color=(0, 255, 0), font=None):
 	if font is None:
 		font = get_default_font(18)
+	# adjust origin by the font's top bearing so (x, y) is the VISUAL top-left
+	l, t, r, b = _text_bbox(font, text)
+	x, y = org
+	y_adj = y - t
 	img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 	pil_img = Image.fromarray(img_rgb)
 	draw = ImageDraw.Draw(pil_img)
-	draw.text(org, text, font=font, fill=(color[2], color[1], color[0]))
-	res = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-	return res
-
-def _measure_text(font, text):
-	if font is None:
-		font = get_default_font(18)
-	img = Image.new("L", (2, 2), 0)
-	draw = ImageDraw.Draw(img)
-	box = draw.textbbox((0, 0), text, font=font)
-	w = box[2] - box[0]
-	h = box[3] - box[1]
-	return w, h
+	draw.text((x, y_adj), text, font=font, fill=(color[2], color[1], color[0]))
+	return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
 # ========================= Per-pixel Lab BG model =========================
 class PixelBG:
@@ -322,25 +323,35 @@ class Palette:
 # ========================= UI helpers (Unicode text via Pillow) =========================
 def put_panel(img, lines, top_left=(10, 10), pad=8, alpha=0.6, color=(0, 255, 0), size=18):
 	x, y = top_left
-	if len(lines) == 0:
+	if not lines:
 		return
 	font = get_default_font(size)
 	line_gap = 6
-	max_w = 0
-	line_hs = []
+
+	# measure each line using true bbox
+	widths = []
+	heights = []
+	tops = []
 	for ln in lines:
-		w, h = _measure_text(font, ln)
-		max_w = max(max_w, w)
-		line_hs.append(h)
-	line_h = max(line_hs) + line_gap
-	total_h = line_h * len(lines)
+		l, t, r, b = _text_bbox(font, ln)
+		widths.append(r - l)
+		heights.append(b - t)
+		tops.append(t)
+
+	panel_w = max(widths)
+	# uniform line height = max visual height among lines
+	line_h = max(heights)
+	total_h = line_h * len(lines) + line_gap * (len(lines) - 1)
+
 	overlay = img.copy()
-	cv2.rectangle(overlay, (x - pad, y - pad), (x + max_w + pad, y + total_h + pad), (0, 0, 0), -1)
+	cv2.rectangle(overlay, (x - pad, y - pad), (x + panel_w + pad, y + total_h + pad), (0, 0, 0), -1)
 	cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
-	y_text = y + line_h - line_gap // 2
+
+	# draw each line at visual top-left with top-bearing compensation
+	y_cursor = y
 	for ln in lines:
-		img[:] = _draw_unicode_text(img, ln, (x, y_text), color=color, font=font)
-		y_text += line_h
+		img[:] = _draw_unicode_text(img, ln, (x, y_cursor), color=color, font=font)
+		y_cursor += line_h + line_gap
 
 def put_banner(img, text, color=(0, 255, 255), size=22):
 	H, W = img.shape[:2]
@@ -348,11 +359,12 @@ def put_banner(img, text, color=(0, 255, 255), size=22):
 	w, h = _measure_text(font, text)
 	pad = 10
 	x = (W - w) // 2
-	y = 15
+	y_top = 15
 	overlay = img.copy()
-	cv2.rectangle(overlay, (x - pad, y), (x + w + pad, y + h + pad * 2), (0, 0, 0), -1)
+	cv2.rectangle(overlay, (x - pad, y_top), (x + w + pad, y_top + h + pad * 2), (0, 0, 0), -1)
 	cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
-	img[:] = _draw_unicode_text(img, text, (x, y + h + pad // 2), color=color, font=font)
+	# draw with top-bearing compensation so text sits flush inside the box
+	img[:] = _draw_unicode_text(img, text, (x, y_top + pad), color=color, font=font)
 
 def draw_label(img, text, org, color=(0, 255, 0), size=18):
 	font = get_default_font(size)
