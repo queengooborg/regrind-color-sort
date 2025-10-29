@@ -102,12 +102,15 @@ class SettingsUI:
 		self.text_buf = ""
 
 	def show(self, img):
-		lines = ["SETTINGS (esc to close, ↑/↓ navigate, ←/→ change, Enter edit/apply)"]
+		lines = [
+			"SETTINGS   [esc] to close",
+			"[up]/[down] navigate   [left]/[right] change   [enter] toggle/edit)"
+		]
 		for i, (k, typ, step) in enumerate(self.fields):
 			val = SETTINGS[k]
-			prefix = "→ " if i == self.idx else "  "
+			prefix = "> " if i == self.idx else "  "
 			if self.editing_text and i == self.idx and typ == "str":
-				val_str = f"{self.text_buf}▌"
+				val_str = f"{self.text_buf}_"
 			else:
 				val_str = str(val)
 			lines.append(f"{prefix}{k}: {val_str}")
@@ -156,7 +159,7 @@ class SettingsUI:
 			return
 
 		# toggle / edit
-		if k in (13, 10) or is_right:
+		if is_right or k in (13, 10):
 			if typ == "bool":
 				SETTINGS[name] = not SETTINGS[name]
 				return
@@ -219,8 +222,7 @@ def main():
 		vis = frame.copy()
 
 		num, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
-		largest_i = None
-		largest_area = 0
+		largest = None
 		labeled = 0
 		unlabeled = 0
 
@@ -234,10 +236,6 @@ def main():
 			if area < SETTINGS["min_area"]:
 				continue
 
-			if area > largest_area:
-				largest_area = area
-				largest_i = i
-
 			comp_mask = (labels == i).astype(np.uint8) * 255
 			contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 			if not contours:
@@ -248,70 +246,79 @@ def main():
 			lab_pixels = lab[labels == i].reshape(-1, 3)
 			match = pal.classify_lab(lab_pixels)
 
+			if not largest or area > largest["area"]:
+				largest = {
+					"area": area,
+					"i": i,
+					"cnt": cnt,
+					"match": match
+				}
+
 			if match:
 				name, score, idx = match
 				labeled += 1
 				cv2.drawContours(vis, [cnt], -1, (0, 255, 0), 2)
 				metric = "dM" if SETTINGS.get("use_mahalanobis", True) else "dE"
-				draw_label(vis, f"{name} ({metric} {score:.2f})", (x, y), (0, 255, 0), size=18)
+				draw_label(vis, f"{name} ({metric} {score:.2f})", (x, y), (0, 255, 0))
 			else:
 				unlabeled += 1
 				if not SETTINGS["hide_unlabeled"]:
 					cv2.drawContours(vis, [cnt], -1, (0, 0, 255), 2)
-					draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255), size=18)
+					draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255))
+
+		# Highlight largest area
+		if largest:
+			cv2.drawContours(vis, [largest["cnt"]], -1, (0, 255, 0) if largest["match"] else (0, 0, 255), 8)
+
 		t_now = time.time()
 		dt = max(1e-6, t_now - t_last)
 		fps_hist.append(1.0 / dt)
 		t_last = t_now
 		fps = sum(fps_hist) / len(fps_hist)
 
-		pil_vis, draw = begin_text(vis)
-		put_panel_ctx(pil_vis, draw, vis.shape, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10), size=18)
+		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}"], top_left=(10, 10))
 
 		if ui_mode == "normal":
-			put_panel_ctx(pil_vis, draw, vis.shape, [
+			put_panel(vis, [
 				"[space] capture BG   [,] settings   [esc] quit",
 				"[.] new class from largest   [key] add sample to that class"
-			], top_left=(10, 50), size=18)
+			], top_left=(10, 50))
 
-			put_panel_ctx(pil_vis, draw, vis.shape, [
+			put_panel(vis, [
 				"Palette:",
 				*pal.legend()
-			], top_left=(10, 110), size=18)
+			], top_left=(10, 110))
 		if not bg.ready and ui_mode != "exit":
-			put_banner_ctx(pil_vis, draw, vis.shape, "BACKGROUND NOT SET — press [space] on a clean background", (0, 255, 255), size=20)
+			put_banner(vis, "BACKGROUND NOT SET   Press [space] on a clean background", (0, 255, 255))
 		if ui_mode == "name":
-			put_panel_ctx(
-				pil_vis, draw, vis.shape,
+			put_panel(
+				vis,
 				[
 					"NEW PALETTE COLOR",
 					"[enter] confirm   [tab] edit keybind   [esc] cancel",
-					f"Name: {input_name}▌",
+					f"Name: {input_name}_",
 					f"Key: {input_key or pal.auto_key(input_name)}"
 				],
-				top_left=(10, 110),
-				size=18
+				top_left=(10, 110)
 			)
 		if ui_mode == "key":
-			put_panel_ctx(
-				pil_vis, draw, vis.shape,
+			put_panel(
+				vis,
 				[
 					"NEW PALETTE COLOR",
 					"press ONE key to assign   [enter] auto   [esc] cancel",
 					f"Name: {input_name}",
-					f"Key: {input_key}▌"
+					f"Key: {input_key}_"
 				],
-				top_left=(10, 110),
-				size=18
+				top_left=(10, 110)
 			)
 		if ui_mode == "exit":
-			put_banner_ctx(pil_vis, draw, vis.shape, "Save settings and palette? [y]/[n]", (50, 50, 255), size=20)
+			put_banner(vis, "Save settings and palette? [y]/[n]", (50, 50, 255))
 
 		if ui_mode == "settings":
 			settings_ui.show(vis)
 			n_lines = 1 + len(settings_ui.fields)
-			put_panel_ctx(pil_vis, draw, vis.shape, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines), size=18)
-		vis = end_text(pil_vis)
+			put_panel(vis, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines))
 		cv2.imshow("regrind", vis)
 
 		k = cv2.waitKeyEx(1)
@@ -328,12 +335,12 @@ def main():
 			if k == ord(','):
 				ui_mode = "settings"
 
-			if k == ord('.') and largest_i is not None:
+			if k == ord('.') and largest is not None:
 				ui_mode = "name"
 				input_name = ""
 				input_key = ""
 
-			if k != 255 and largest_i is not None:
+			if k != 255 and largest is not None:
 				if 32 <= k < 127:
 					ch = chr(k)
 				else:
@@ -341,7 +348,7 @@ def main():
 				if ch is not None:
 					idx = pal.key_to_index(ch)
 					if idx is not None:
-						pal.add_sample(idx, lab[labels == largest_i].reshape(-1, 3))
+						pal.add_sample(idx, lab[labels == largest.get("i")].reshape(-1, 3))
 
 		elif ui_mode == "name":
 			if k == 27:
@@ -351,7 +358,7 @@ def main():
 
 			elif k in (13, 10):
 				name_final = input_name if input_name != "" else f"class_{len(pal.colors) + 1}"
-				pal.add_class_from_pixels(name_final, lab[labels == largest_i].reshape(-1, 3))
+				pal.add_class_from_pixels(name_final, lab[labels == largest.get("i")].reshape(-1, 3))
 				ui_mode = "normal"
 				input_name = ""
 				input_key = ""
@@ -373,7 +380,7 @@ def main():
 
 			elif k in (13, 10):
 				name_final = input_name if input_name != "" else f"class_{len(pal.colors) + 1}"
-				pal.add_class_from_pixels(name_final, lab[labels == largest_i].reshape(-1, 3), key=None)
+				pal.add_class_from_pixels(name_final, lab[labels == largest.get("i")].reshape(-1, 3), key=None)
 				ui_mode = "normal"
 				input_name = ""
 				input_key = ""
@@ -381,7 +388,7 @@ def main():
 			elif 32 <= k < 127:
 				input_key = chr(k)
 				name_final = input_name if input_name != "" else f"class_{len(pal.colors) + 1}"
-				pal.add_class_from_pixels(name_final, lab[labels == largest_i].reshape(-1, 3), key=input_key[0])
+				pal.add_class_from_pixels(name_final, lab[labels == largest.get("i")].reshape(-1, 3), key=input_key[0])
 				ui_mode = "normal"
 				input_name = ""
 				input_key = ""
