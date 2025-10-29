@@ -7,38 +7,11 @@ import time
 import json
 import os
 from collections import deque
-from threading import Thread, Lock
 
 from lib.ui import *
 from lib.palette import *
 from lib.bg import *
-
-class FrameGrabber:
-	def __init__(self, cap):
-		self.cap = cap
-		self.lock = Lock()
-		self.frame = None
-		self.stopped = False
-		self.t = Thread(target=self._loop, daemon=True)
-
-	def start(self):
-		self.t.start()
-		return self
-
-	def _loop(self):
-		while not self.stopped:
-			ok, f = self.cap.read()
-			if not ok:
-				continue
-			with self.lock:
-				self.frame = f
-
-	def read(self):
-		with self.lock:
-			return None if self.frame is None else self.frame.copy()
-
-	def stop(self):
-		self.stopped = True
+from lib.framegrabber import *
 
 # ========================= Defaults (changed via Settings panel) =========================
 SETTINGS = {

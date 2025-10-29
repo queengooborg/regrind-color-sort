@@ -1,0 +1,28 @@
+from threading import Thread, Lock
+
+class FrameGrabber:
+	def __init__(self, cap):
+		self.cap = cap
+		self.lock = Lock()
+		self.frame = None
+		self.stopped = False
+		self.t = Thread(target=self._loop, daemon=True)
+
+	def start(self):
+		self.t.start()
+		return self
+
+	def _loop(self):
+		while not self.stopped:
+			ok, f = self.cap.read()
+			if not ok:
+				continue
+			with self.lock:
+				self.frame = f
+
+	def read(self):
+		with self.lock:
+			return None if self.frame is None else self.frame.copy()
+
+	def stop(self):
+		self.stopped = True
