@@ -7,6 +7,7 @@ Currently, only the CV portion has been completed.  The hardware portion is stil
 ## Requirements
 
 - Raspberry Pi
+  - Python 3.11+
 - A webcam or better
 - A solid background (neutral gray preferred)
 - A 3D printer (eventually)

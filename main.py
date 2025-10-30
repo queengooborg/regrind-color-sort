@@ -8,6 +8,7 @@ import numpy as np
 import time
 import json
 import os
+import sys
 from collections import deque
 from cv2_enumerate_cameras import enumerate_cameras
 
@@ -15,6 +16,8 @@ from lib.ui import *
 from lib.palette import *
 from lib.bg import *
 from lib.framegrabber import *
+
+assert sys.version_info >= (3, 11), "Requires Python 3.11 or newer"
 
 # ========================= Settings =========================
 SETTINGS = {
