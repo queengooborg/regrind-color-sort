@@ -1,3 +1,8 @@
+# regrind-color-sort - lib/palette.py
+# 
+# This program uses OpenCV to identify plastic regrind against a background and classify it by colors as specified by the user
+# (c) 2025 ChatGPT, Vinyl Da.i'gyu-Kazotetsu
+
 import os
 import json
 import numpy as np
