@@ -4,8 +4,8 @@ import numpy as np
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 # ========================= UI helpers =========================
-def put_panel(img, lines, top_left=(10, 10), pad=8, alpha=0.6, color=(0, 255, 0)):
-	x, y = top_left
+def put_panel(img, lines, pos=(10, 10), pad=8, alpha=0.6, color=(0, 255, 0)):
+	x, y = pos
 	scale = 0.55
 	thick = 1
 	line_gap = 6

@@ -90,7 +90,7 @@ class SettingsUI:
 			else:
 				val_str = str(val)
 			lines.append(f"{prefix}{k}: {val_str}")
-		put_panel(img, lines, top_left=(10, 110))
+		put_panel(img, lines, pos=(10, 110))
 
 	def handle_key(self, k, cap_ref):
 		kchar = chr(k) if 32 <= k < 127 else None
@@ -262,18 +262,18 @@ def main():
 		t_last = t_now
 		fps = sum(fps_hist) / len(fps_hist)
 
-		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}   Total:{labeled+unlabeled}"], top_left=(10, 10))
+		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}   Total:{labeled+unlabeled}"], pos=(10, 10))
 
 		if ui_mode == "normal":
 			put_panel(vis, [
 				"[space] capture BG   [,] settings   [esc] quit",
 				"[.] new class from largest   [key] add sample to that class"
-			], top_left=(10, 50))
+			], pos=(10, 50))
 
 			put_panel(vis, [
 				"Palette:",
 				*pal.legend()
-			], top_left=(10, 110))
+			], pos=(10, 110))
 		if not bg.ready and ui_mode != "exit":
 			put_banner(vis, "BACKGROUND NOT SET   Press [space] on a clean background", (0, 255, 255))
 		if ui_mode in ["name", "key"]:
@@ -285,7 +285,7 @@ def main():
 					f"Name: {input_name}{'_' if ui_mode == "name" else ''}",
 					f"Key: {input_key or pal.auto_key(input_name)}{'_' if ui_mode == "key" else ''}"
 				],
-				top_left=(10, 110)
+				pos=(10, 110)
 			)
 		if ui_mode == "exit":
 			put_banner(vis, "Save settings and palette? [y]/[n]", (50, 50, 255))
@@ -293,7 +293,7 @@ def main():
 		if ui_mode == "settings":
 			settings_ui.show(vis)
 			n_lines = 1 + len(settings_ui.fields)
-			put_panel(vis, ["Note: camera/size changes apply on restart."], top_left=(10, 110 + 24 * n_lines))
+			put_panel(vis, ["Note: camera/size changes apply on restart."], pos=(10, 110 + 24 * n_lines))
 		cv2.imshow("regrind", vis)
 
 		# Handle keyboard inputs
