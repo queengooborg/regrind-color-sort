@@ -224,7 +224,7 @@ def find_regions(frame, bg, vis, pal):
 	if largest:
 		cv2.drawContours(vis, [largest["cnt"]], -1, (0, 255, 0) if largest["match"] else (0, 0, 255), 8)
 
-	return [labeled, unlabeled, largest]
+	return [labeled, unlabeled, largest, mask, lab, labels]
 
 def main():
 	global SETTINGS
@@ -263,7 +263,7 @@ def main():
 
 		vis = frame.copy()
 
-		labeled, unlabeled, largest = find_regions(frame, bg, vis, pal)
+		labeled, unlabeled, largest, mask, lab, labels = find_regions(frame, bg, vis, pal)
 
 		t_now = time.time()
 		dt = max(1e-6, t_now - t_last)
