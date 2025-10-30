@@ -23,6 +23,7 @@ SETTINGS = {
 	"use_edges": True,
 	"min_area": 1500,
 	"deltaE_thresh": 18.0,
+	"bounding_boxes": False,
 	"camera": 0,
 	"palette_path": "palette.json"
 }
@@ -61,6 +62,7 @@ class SettingsUI:
 			("use_edges", "bool", None),
 			("min_area", "int", 100),
 			("deltaE_thresh", "float", 1.0),
+			("bounding_boxes", "bool", None),
 			("palette_path", "str", None),
 			("camera", "int", 1)
 		]
@@ -220,12 +222,12 @@ def main():
 			if area < SETTINGS["min_area"]:
 				continue
 
-			comp_mask = (labels == i).astype(np.uint8) * 255
-			contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-			if not contours:
-				continue
-
-			cnt = max(contours, key=cv2.contourArea)
+			cnt = np.array([[[x, y]], [[x+w, y]], [[x+w, y+h]], [[x, y+h]]], dtype=np.int32)
+			if not SETTINGS['bounding_boxes']:
+				comp_mask = (labels == i).astype(np.uint8) * 255
+				contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+				if contours:
+					cnt = max(contours, key=cv2.contourArea)
 
 			lab_pixels = lab[labels == i].reshape(-1, 3)
 			match = pal.classify_lab(lab_pixels)
@@ -234,20 +236,19 @@ def main():
 				largest = {
 					"area": area,
 					"i": i,
-					"cnt": cnt,
-					"match": match
+					"match": match,
+					"cnt": cnt
 				}
 
 			if match:
 				name, score, idx = match
 				labeled += 1
-				cv2.drawContours(vis, [cnt], -1, (0, 255, 0), 2)
-				metric = "dM" if SETTINGS.get("use_mahalanobis", True) else "dE"
-				draw_label(vis, f"{name} ({metric} {score:.2f})", (x, y), (0, 255, 0))
+				draw_label(vis, f"{name} (dE {score:.2f})", (x, y), (0, 255, 0))
 			else:
 				unlabeled += 1
-				cv2.drawContours(vis, [cnt], -1, (0, 0, 255), 2)
 				draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255))
+
+			cv2.drawContours(vis, [cnt], -1, (0, 255, 0) if match else (0, 0, 255), 2)
 
 		# Highlight largest area
 		if largest:
