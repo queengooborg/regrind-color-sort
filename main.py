@@ -23,7 +23,6 @@ SETTINGS = {
 	"use_edges": True,
 	"min_area": 1500,
 	"deltaE_thresh": 18.0,
-	"hide_unlabeled": False,
 	"camera": 0,
 	"palette_path": "palette.json"
 }
@@ -62,7 +61,6 @@ class SettingsUI:
 			("use_edges", "bool", None),
 			("min_area", "int", 100),
 			("deltaE_thresh", "float", 1.0),
-			("hide_unlabeled", "bool", None),
 			("palette_path", "str", None),
 			("camera", "int", 1)
 		]
@@ -248,9 +246,8 @@ def main():
 				draw_label(vis, f"{name} ({metric} {score:.2f})", (x, y), (0, 255, 0))
 			else:
 				unlabeled += 1
-				if not SETTINGS["hide_unlabeled"]:
-					cv2.drawContours(vis, [cnt], -1, (0, 0, 255), 2)
-					draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255))
+				cv2.drawContours(vis, [cnt], -1, (0, 0, 255), 2)
+				draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255))
 
 		# Highlight largest area
 		if largest:
