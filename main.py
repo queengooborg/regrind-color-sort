@@ -175,13 +175,17 @@ class SettingsUI:
 def main():
 	global SETTINGS
 	SETTINGS = SettingsIO.load("settings.json", SETTINGS)
-	cap = cv2.VideoCapture(SETTINGS["camera"])
-	grab = FrameGrabber(cap).start()
-
-	if not cap.isOpened():
-		raise SystemExit("Could not open video source (change camera in Settings).")
-
 	pal = Palette(SETTINGS)
+
+	cap = cv2.VideoCapture(SETTINGS["camera"])
+	if not cap.isOpened():
+		print("Could not load specified camera, switching to default...")
+		cap = cv2.VideoCapture(0)
+		if not cap.isOpened():
+			raise SystemExit("Could not load default camera, please check if a camera is connected and if it is in use by other programs")
+		SETTINGS["camera"] = 0
+
+	grab = FrameGrabber(cap).start()
 
 	bg = None
 	t_last = time.time()
