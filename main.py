@@ -294,7 +294,7 @@ def main():
 				pos=(10, 110)
 			)
 		if ui_mode == "exit":
-			put_banner(vis, "Save settings and palette? [y]/[n]", (50, 50, 255))
+			put_banner(vis, "Save settings and palette? [y]es/[n]o/[s]ettings only/[p]alette only", (50, 50, 255))
 
 		if ui_mode == "settings":
 			settings_ui.show(vis)
@@ -365,10 +365,15 @@ def main():
 				ui_mode = "normal"
 
 		elif ui_mode == "exit":
-			if k in (ord('y'), ord('n')):
-				if k == ord('y'):
+			if k in (ord('y'), ord('n'), ord('s'), ord('p')):
+				if k in (ord('y'), ord('s')):
 					try:
 						SettingsIO.save("settings.json", SETTINGS)
+					except Exception:
+						pass
+
+				if k in (ord('y'), ord('p')):
+					try:
 						pal.save()
 					except Exception:
 						pass
