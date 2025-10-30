@@ -70,6 +70,7 @@ class SettingsUI:
 		self.editing_text = False
 		self.text_buf = ""
 		self.cameras = enumerate_cameras()
+		self.original_camera = SETTINGS["camera"]
 
 	def show(self, img):
 		lines = [
@@ -81,6 +82,8 @@ class SettingsUI:
 			prefix = "> " if i == self.idx else "  "
 			if k == "camera":
 				val_str = self.cameras[val].name
+				if self.original_camera != val:
+					val_str += " (Changes on next launch)"
 			elif self.editing_text and i == self.idx and typ == "str":
 				val_str = f"{self.text_buf}_"
 			else:
@@ -149,7 +152,6 @@ class SettingsUI:
 			SETTINGS[name] = not SETTINGS[name]
 			return
 		if name == "camera":
-			print(name, typ, step)
 			delta = (step or 1) * direction
 			val = SETTINGS[name] + delta
 			if val < 0:
@@ -296,8 +298,6 @@ def main():
 
 		if ui_mode == "settings":
 			settings_ui.show(vis)
-			n_lines = 1 + len(settings_ui.fields)
-			put_panel(vis, ["Note: camera/size changes apply on restart."], pos=(10, 110 + 24 * n_lines))
 		cv2.imshow("regrind", vis)
 
 		# Handle keyboard inputs
