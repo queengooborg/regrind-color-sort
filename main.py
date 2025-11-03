@@ -14,6 +14,7 @@ from cv2_enumerate_cameras import enumerate_cameras
 
 try:
 	from picamera2 import Picamera2
+	from libcamera import controls
 except ImportError:
 	Picamera2 = None
 
@@ -241,6 +242,7 @@ def main():
 		cap.configure(cap.create_video_configuration(
 			main={"format": "RGB888", "size": (1280, 720)}
 		))
+		cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 		cap.start()
 	else:
 		cap = cv2.VideoCapture(SETTINGS["camera"])
