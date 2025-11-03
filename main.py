@@ -12,6 +12,11 @@ import sys
 from collections import deque
 from cv2_enumerate_cameras import enumerate_cameras
 
+try:
+	from picamera2 import Picamera2
+except ImportError:
+	Picamera2 = None
+
 from lib.ui import *
 from lib.palette import *
 from lib.bg import *
@@ -231,15 +236,22 @@ def main():
 	SETTINGS = SettingsIO.load("settings.json", SETTINGS)
 	pal = Palette(SETTINGS)
 
-	cap = cv2.VideoCapture(SETTINGS["camera"])
-	if not cap.isOpened():
-		print("Could not load specified camera, switching to default...")
-		cap = cv2.VideoCapture(0)
+	if Picamera2:
+		cap = Picamera2()
+		cap.configure(cap.create_video_configuration(
+			main={"format": "RGB888", "size": (1280, 720)}
+		))
+		cap.start()
+	else:
+		cap = cv2.VideoCapture(SETTINGS["camera"])
 		if not cap.isOpened():
-			raise SystemExit("Could not load default camera, please check if a camera is connected and if it is in use by other programs")
-		SETTINGS["camera"] = 0
+			print("Could not load specified camera, switching to default...")
+			cap = cv2.VideoCapture(0)
+			if not cap.isOpened():
+				raise SystemExit("Could not load default camera, please check if a camera is connected and if it is in use by other programs")
+			SETTINGS["camera"] = 0
 
-	grab = FrameGrabber(cap).start()
+	grab = FrameGrabber(cap, bool(Picamera2)).start()
 
 	bg = None
 	t_last = time.time()
@@ -385,7 +397,10 @@ def main():
 					grab.stop()
 				except Exception:
 					pass
-				cap.release()
+				if Picamera2:
+					cap.stop()
+				else:
+					cap.release()
 				cv2.destroyAllWindows()
 				break
 

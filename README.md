@@ -24,6 +24,10 @@ The following is a quick mockup of the intended hardware design for this. The de
 
 ![](./mockup.png)
 
+## Setup
+
+Run `install.sh` to install everything needed.
+
 ## How to Use
 
 The hardware portion is still in the works, so currently, this is a proof-of-concept for the CV side.  To use the CV side:

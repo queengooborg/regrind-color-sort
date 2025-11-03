@@ -6,8 +6,9 @@
 from threading import Thread, Lock
 
 class FrameGrabber:
-	def __init__(self, cap):
+	def __init__(self, cap, is_picam):
 		self.cap = cap
+		self.is_picam = is_picam
 		self.lock = Lock()
 		self.frame = None
 		self.stopped = False
@@ -19,9 +20,12 @@ class FrameGrabber:
 
 	def _loop(self):
 		while not self.stopped:
-			ok, f = self.cap.read()
-			if not ok:
-				continue
+			if self.is_picam:
+				f = self.cap.capture_array()
+			else:
+				ok, f = self.cap.read()
+				if not ok:
+					continue
 			with self.lock:
 				self.frame = f
 
