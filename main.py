@@ -6,11 +6,8 @@
 import cv2
 import numpy as np
 import time
-import json
-import os
 import sys
 from collections import deque
-from cv2_enumerate_cameras import enumerate_cameras
 
 try:
 	from picamera2 import Picamera2
@@ -22,217 +19,9 @@ from lib import *
 
 assert sys.version_info >= (3, 11), "Requires Python 3.11 or newer"
 
-# ========================= Settings =========================
-SETTINGS = {
-	"d_ab": 12.0,
-	"dL": 18.0,
-	"use_edges": True,
-	"min_area": 1500,
-	"deltaE_thresh": 18.0,
-	"bounding_boxes": False,
-	"camera": 0,
-	"palette_path": "palette.json"
-}
-
-class SettingsIO:
-	@staticmethod
-	def load(path, defaults):
-		import json, os
-		if not os.path.exists(path):
-			return defaults.copy()
-		try:
-			with open(path, "r", encoding="utf-8") as f:
-				data = json.load(f)
-		except Exception:
-			return defaults.copy()
-		out = defaults.copy()
-		for k, v in data.items():
-			if k in out:
-				out[k] = v
-		return out
-
-	@staticmethod
-	def save(path, settings):
-		import json, os
-		tmp = f"{path}.tmp"
-		with open(tmp, "w", encoding="utf-8") as f:
-			json.dump(settings, f, indent=2)
-		os.replace(tmp, path)
-
-# ========================= Settings panel (in-window) =========================
-class SettingsUI:
-	def __init__(self):
-		self.fields = [
-			("d_ab", "float", 1.0),
-			("dL", "float", 1.0),
-			("use_edges", "bool", None),
-			("min_area", "int", 100),
-			("deltaE_thresh", "float", 1.0),
-			("bounding_boxes", "bool", None),
-			("palette_path", "str", None),
-			("camera", "int", 1)
-		]
-		self.idx = 0
-		self.editing_text = False
-		self.text_buf = ""
-		self.cameras = enumerate_cameras()
-		self.original_camera = SETTINGS["camera"]
-
-	def show(self, img):
-		lines = [
-			"SETTINGS   [esc] to close",
-			"[up]/[down] navigate   [left]/[right] change   [enter] toggle/edit)"
-		]
-		for i, (k, typ, step) in enumerate(self.fields):
-			val = SETTINGS[k]
-			prefix = "> " if i == self.idx else "  "
-			if k == "camera":
-				val_str = self.cameras[val].name
-				if self.original_camera != val:
-					val_str += " (Changes on next launch)"
-			elif self.editing_text and i == self.idx and typ == "str":
-				val_str = f"{self.text_buf}_"
-			else:
-				val_str = str(val)
-			lines.append(f"{prefix}{k}: {val_str}")
-		put_panel(img, lines, pos=(10, 110))
-
-	def handle_key(self, k, cap_ref):
-		kchar = chr(k) if 32 <= k < 127 else None
-		name, typ, step = self.fields[self.idx]
-
-		# text edit mode
-		if self.editing_text:
-			if k == 27:
-				self.editing_text = False
-				self.text_buf = ""
-				return
-			if k in (13, 10):
-				if self.text_buf != "":
-					SETTINGS[name] = self.text_buf
-				self.editing_text = False
-				self.text_buf = ""
-				return
-			if k in (8, 127):
-				self.text_buf = self.text_buf[:-1]
-				return
-			if kchar:
-				self.text_buf += kchar
-			return
-
-		# navigation keys
-		is_up = k in (82, 63232, 2490368)
-		is_down = k in (84, 63233, 2621440)
-		is_left = k in (81, 63234, 2424832)
-		is_right = k in (83, 63235, 2555904)
-
-		if is_up:
-			self.idx = (self.idx - 1) % len(self.fields)
-			return
-		if is_down:
-			self.idx = (self.idx + 1) % len(self.fields)
-			return
-		if is_left:
-			self._bump(-1, cap_ref)
-			return
-		if is_right:
-			self._bump(+1, cap_ref)
-			return
-
-		# toggle / edit
-		if is_right or k in (13, 10):
-			if typ == "bool":
-				SETTINGS[name] = not SETTINGS[name]
-				return
-			if typ == "str":
-				self.editing_text = True
-				self.text_buf = str(SETTINGS[name])
-				return
-
-		if k == 27:
-			return 'exit'
-
-	def _bump(self, direction, cap_ref):
-		name, typ, step = self.fields[self.idx]
-		if typ == "bool":
-			SETTINGS[name] = not SETTINGS[name]
-			return
-		if name == "camera":
-			delta = (step or 1) * direction
-			val = SETTINGS[name] + delta
-			if val < 0:
-				val = len(self.cameras) - 1
-			if val >= len(self.cameras):
-				val = 0
-			SETTINGS[name] = val
-			return
-		if typ in ("int", "float"):
-			delta = (step or 1) * direction
-			if typ == "int":
-				SETTINGS[name] = max(0, int(SETTINGS[name] + delta))
-			else:
-				SETTINGS[name] = float(SETTINGS[name] + delta)
-			return
-		# 'str' is edited via Enter
-
-# ========================= Main =========================
-
-def find_regions(frame, bg, vis, pal):
-	mask, lab = segment(frame, bg, SETTINGS)
-
-	num, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
-	largest = None
-	labeled = 0
-	unlabeled = 0
-
-	for i in range(1, num):
-		x = int(stats[i, cv2.CC_STAT_LEFT])
-		y = int(stats[i, cv2.CC_STAT_TOP])
-		w = int(stats[i, cv2.CC_STAT_WIDTH])
-		h = int(stats[i, cv2.CC_STAT_HEIGHT])
-		area = int(stats[i, cv2.CC_STAT_AREA])
-
-		if area < SETTINGS["min_area"]:
-			continue
-
-		cnt = np.array([[[x, y]], [[x+w, y]], [[x+w, y+h]], [[x, y+h]]], dtype=np.int32)
-		if not SETTINGS['bounding_boxes']:
-			comp_mask = (labels == i).astype(np.uint8) * 255
-			contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-			if contours:
-				cnt = max(contours, key=cv2.contourArea)
-
-		lab_pixels = lab[labels == i].reshape(-1, 3)
-		match = pal.classify_lab(lab_pixels)
-
-		if not largest or area > largest["area"]:
-			largest = {
-				"area": area,
-				"i": i,
-				"match": match,
-				"cnt": cnt
-			}
-
-		if match:
-			name, score, idx = match
-			labeled += 1
-			draw_label(vis, f"{name} (dE {score:.2f})", (x, y), (0, 255, 0))
-		else:
-			unlabeled += 1
-			draw_label(vis, "unlabeled", (x, max(20, y - 8)), (0, 0, 255))
-
-		cv2.drawContours(vis, [cnt], -1, (0, 255, 0) if match else (0, 0, 255), 2)
-
-	# Highlight largest area
-	if largest:
-		cv2.drawContours(vis, [largest["cnt"]], -1, (0, 255, 0) if largest["match"] else (0, 0, 255), 8)
-
-	return [labeled, unlabeled, largest, mask, lab, labels]
-
 def main():
-	global SETTINGS
-	SETTINGS = SettingsIO.load("settings.json", SETTINGS)
-	pal = Palette(SETTINGS)
+	settings = Settings()
+	pal = Palette(settings)
 
 	if Picamera2:
 		cap = Picamera2()
@@ -242,13 +31,13 @@ def main():
 		cap.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 		cap.start()
 	else:
-		cap = cv2.VideoCapture(SETTINGS["camera"])
+		cap = cv2.VideoCapture(settings["camera"])
 		if not cap.isOpened():
 			print("Could not load specified camera, switching to default...")
 			cap = cv2.VideoCapture(0)
 			if not cap.isOpened():
 				raise SystemExit("Could not load default camera, please check if a camera is connected and if it is in use by other programs")
-			SETTINGS["camera"] = 0
+			settings["camera"] = 0
 
 	grab = FrameGrabber(cap, bool(Picamera2)).start()
 
@@ -259,7 +48,7 @@ def main():
 	ui_mode = "normal"
 	input_name = ""
 	input_key = ""
-	settings_ui = SettingsUI()
+	settings_ui = SettingsUI(settings)
 
 	cv2.namedWindow("Filament Regrind Color Classifier", cv2.WINDOW_NORMAL)
 
@@ -375,14 +164,14 @@ def main():
 
 		elif ui_mode == "settings":
 			if settings_ui.handle_key(k, cap) == 'exit':
-				pal.settings = SETTINGS
+				pal.settings = settings
 				ui_mode = "normal"
 
 		elif ui_mode == "exit":
 			if k in (ord('y'), ord('n'), ord('s'), ord('p')):
 				if k in (ord('y'), ord('s')):
 					try:
-						SettingsIO.save("settings.json", SETTINGS)
+						settings.save()
 					except Exception:
 						pass
 
