@@ -18,6 +18,12 @@ Currently, only the CV portion has been completed.  The hardware portion is stil
 - A 3D printer (eventually)
 - More TBD
 
+## Hardware Design
+
+The following is a quick mockup of the intended hardware design for this. The design may change as development progresses.
+
+![](./mockup.png)
+
 ## How to Use
 
 The hardware portion is still in the works, so currently, this is a proof-of-concept for the CV side.  To use the CV side:
