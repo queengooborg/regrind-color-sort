@@ -13,7 +13,8 @@ Currently, only the CV portion has been completed.  The hardware portion is stil
 
 - Raspberry Pi
   - Python 3.11+
-- A webcam or better
+- Raspberry Pi camera
+  - A webcam also works, but not recommended for the hardware setup
 - A solid background (neutral gray preferred)
 - A 3D printer (eventually)
 - More TBD
@@ -26,7 +27,7 @@ The following is a quick mockup of the intended hardware design for this. The de
 
 ## Setup
 
-Run `install.sh` to install everything needed.
+Run `install.sh` to install everything.
 
 ## How to Use
 
