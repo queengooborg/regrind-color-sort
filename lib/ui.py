@@ -39,7 +39,7 @@ def put_banner(img, text, color=(0, 255, 255)):
 	(tw, th), _ = cv2.getTextSize(text, FONT, scale, thick)
 	pad = 10
 	x = (W - tw) // 2
-	y = 15
+	y = H - 45
 	overlay = img.copy()
 	cv2.rectangle(overlay, (x - pad, y), (x + tw + pad, y + th + pad * 2), (0, 0, 0), -1)
 	cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
