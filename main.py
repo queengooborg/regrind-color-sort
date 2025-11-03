@@ -18,10 +18,7 @@ try:
 except ImportError:
 	Picamera2 = None
 
-from lib.ui import *
-from lib.palette import *
-from lib.bg import *
-from lib.framegrabber import *
+from lib import *
 
 assert sys.version_info >= (3, 11), "Requires Python 3.11 or newer"
 
@@ -277,7 +274,7 @@ def main():
 
 		vis = frame.copy()
 
-		labeled, unlabeled, largest, mask, lab, labels = find_regions(frame, bg, vis, pal)
+		labeled, unlabeled, largest, mask, lab, labels = find_regions(frame, bg, vis, pal, settings)
 
 		t_now = time.time()
 		dt = max(1e-6, t_now - t_last)
