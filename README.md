@@ -1,5 +1,10 @@
 # Plastic Regrind Color Sort
 
+> [!NOTE]
+> If you enjoy this project and want to help with its maintenance, please consider supporting me via Ko-Fi!
+>
+> <a href='https://ko-fi.com/queengooborg' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi4.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+
 This is a project for automating the sorting process of plastic regrind by color with the intent of aiding the recycling of failed 3D prints and filament change purge into new filament.  This is designed to run on a Raspberry Pi in order to drive the computer vision algorithm whilst also providing GPIO pins for the electronics.
 
 Currently, only the CV portion has been completed.  The hardware portion is still in the works.
