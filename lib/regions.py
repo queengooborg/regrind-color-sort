@@ -14,7 +14,9 @@ class PixelBG:
 		self.var_ab = np.ones((H, W, 2), np.float32) * 9.0
 		self.ready = False
 
-	def init_from(self, lab):
+	def init_from(self, frame):
+		blur = cv2.GaussianBlur(frame, (5, 5), 0)
+		lab = cv2.cvtColor(blur, cv2.COLOR_BGR2LAB).astype(np.float32)
 		self.mu_lab[:] = lab
 		self.var_ab[:] = 9.0
 		self.ready = True

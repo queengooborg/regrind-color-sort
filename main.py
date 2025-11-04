@@ -111,9 +111,7 @@ def main():
 				ui_mode = "exit"
 
 			if k == ord(' '):
-				blur = cv2.GaussianBlur(frame, (5, 5), 0)
-				lab0 = cv2.cvtColor(blur, cv2.COLOR_BGR2LAB).astype(np.float32)
-				bg.init_from(lab0)
+				bg.init_from(frame)
 
 			if k == ord(','):
 				ui_mode = "settings"
