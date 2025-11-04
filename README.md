@@ -25,6 +25,8 @@ The following is a quick mockup of the intended hardware design for this. The de
 
 ![](./mockup.png)
 
+The hardware will be designed for regrind created with P-4 (4x38mm) security level shredder or smaller.
+
 ## Setup
 
 Run `install.sh` to install everything.
