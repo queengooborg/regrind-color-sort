@@ -2,3 +2,4 @@
 __pycache__
 palette.json
 settings.json
+*.FCStd1
