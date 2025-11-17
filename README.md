@@ -13,6 +13,7 @@ Currently, only the CV portion has been completed.  The hardware portion is stil
 
 - Raspberry Pi
   - Python 3.11+
+  - I2C enabled in `raspi-config`
 - Raspberry Pi camera
   - A webcam also works, but not recommended for the hardware setup
 - A solid background (neutral gray preferred)
