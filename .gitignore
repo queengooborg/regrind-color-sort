@@ -3,3 +3,5 @@ __pycache__
 palette.json
 settings.json
 *.FCStd1
+*.stl
+*.3mf
