@@ -17,7 +17,9 @@ Currently, only the CV portion has been completed. The hardware portion is still
 - Raspberry Pi camera
   - A webcam also works, but not recommended for the hardware setup
 - A solid background (neutral gray preferred)
-- A 3D printer (eventually)
+- A 3D printer
+  - Recommended: 256mm x 256mm build plate
+  - Minimum: 180mm x 180mm build plate
 - More TBD
 
 ## Hardware Design
@@ -27,6 +29,43 @@ The following is a quick mockup of the intended hardware design for this. The de
 ![](./mockup.png)
 
 The hardware will be designed for regrind created with P-4 (4x38mm) security level shredder or smaller.
+
+## 3D Printing
+
+> [!NOTE]
+> This design is not yet finished. Please wait until models for the hopper, feeder, Pi holder, etc. have been created.
+
+The 3D printed parts are designed to fit on the build plate of a Bambu Lab X1 Carbon -- in other words, 256mm x 256mm. However, by cutting larger models in half, they can safely fit on the build plate of an A1 mini (180mm x 180mm).
+
+I recommend the following print settings:
+
+- Material: Any Except TPU, PLA or PETG Recommended
+- Layer Height: 0.2
+- Walls: 2
+- Infill: 15%
+- Support: No
+- Raft/Brim: No\*
+  - If your printer isn't printing the flaps well, enable the brim for those
+
+You'll need to print all of the models in the `models/` folder, most needing to be printed multiple times. Here are the counts:
+
+| Model          | Quantity |
+| -------------- | -------- |
+| Bin            | 17       |
+| Bin Holder     | 17       |
+| Flap           | 11       |
+| Flap Connector | 8        |
+| Stage 1 Paths  | 1        |
+| Stage 2 Paths  | 2        |
+| Stage 3 Paths  | 4        |
+| Reject Flap    | 1        |
+| Reject Path    | 1        |
+
+## Assembly
+
+As the design is still in development, a step-by-step guide is not yet made. For now, please review the CAD files to determine where each piece goes.
+
+To attach the stages together, you can either use glue, such as B-6000 or superglue, to glue the pieces, or you can run a low-heat soldering iron along the seams and weld the pieces together.
 
 ## Setup
 
