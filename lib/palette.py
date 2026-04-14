@@ -36,15 +36,21 @@ class Palette:
 		if not self.colors:
 			return ["(empty)"]
 		parts = []
-		for c in self.colors:
+		for i, c in enumerate(self.colors):
 			key = c.get("key")
 			name = c.get("name", "?")
-			parts.append(f"{key}: {name}" if key else f"•: {name}")
+			parts.append(f"Bin {i}: {name} ({key or "•"})")
 		return parts
 
 	def key_to_index(self, k):
 		for i, c in enumerate(self.colors):
 			if c.get("key") == k:
+				return i
+		return None
+
+	def name_to_index(self, name):
+		for i, c in enumerate(self.colors):
+			if c.get("name") == name:
 				return i
 		return None
 

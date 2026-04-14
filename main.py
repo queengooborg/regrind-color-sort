@@ -50,6 +50,9 @@ def main():
 	input_key = ""
 	settings_ui = SettingsUI(settings)
 
+	largest_match = None
+	largest_match_duration = 0.0
+
 	cv2.namedWindow("Filament Regrind Color Classifier", cv2.WINDOW_NORMAL)
 
 	while True:
@@ -71,6 +74,17 @@ def main():
 		t_last = t_now
 		fps = sum(fps_hist) / len(fps_hist)
 
+		if ui_mode == "operate" and largest:
+			if largest['match']:
+				if largest_match == largest['match'][0]:
+					largest_match_duration += dt
+				else:
+					largest_match = largest['match'][0]
+					largest_match_duration = 0.0
+			else:
+				largest_match = None
+				largest_match_duration = 0.0
+
 		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}   Total:{labeled+unlabeled}"], pos=(10, 10))
 
 		if ui_mode == "setup":
@@ -90,7 +104,14 @@ def main():
 				"[tab] switch mode   [esc] quit"
 			], pos=(10, 50))
 
-			put_banner(vis, "THIS MODE IS NOT YET OPERATIONAL", (0, 0, 255))
+			if largest_match:
+				remaining_time = 2.0 - largest_match_duration
+
+				if remaining_time <= 0:
+					put_banner(vis, f"{largest_match} selected, dropping into bin...", (255, 255, 0))
+				else:
+					put_banner(vis, f"Selecting {largest_match} in {remaining_time:.2f} seconds...", (255, 255, 0))
+
 
 			put_panel(vis, [
 				"Palette:",
@@ -119,37 +140,47 @@ def main():
 		# Handle keyboard inputs
 		k = cv2.waitKeyEx(1)
 
-		if ui_mode in ["setup", "operate"]:
+		if ui_mode == "setup":
 			if k == 27:
 				ui_mode = "exit"
 
 			if k == 9:
-				ui_mode = "operate" if ui_mode == "setup" else "setup"
+				largest_match_duration = 0.0
+				ui_mode = "operate"
 
-			if ui_mode == "setup":
-				if k == ord(' '):
-					bg.init_from(frame)
+			if k == ord(' '):
+				bg.init_from(frame)
 
-				if k == ord(','):
-					ui_mode = "settings"
+			if k == ord(','):
+				ui_mode = "settings"
 
-				if k == ord('.') and largest is not None:
-					ui_mode = "name"
-					input_name = ""
-					input_key = ""
+			if k == ord('.') and largest is not None:
+				ui_mode = "name"
+				input_name = ""
+				input_key = ""
 
-				if k != 255 and largest is not None:
-					if 32 <= k < 127:
-						ch = chr(k)
-					else:
-						ch = None
-					if ch is not None:
-						idx = pal.key_to_index(ch)
-						if idx is not None:
-							pal.add_sample(idx, lab[labels == largest.get("i")].reshape(-1, 3))
+			if k != 255 and largest is not None:
+				if 32 <= k < 127:
+					ch = chr(k)
+				else:
+					ch = None
+				if ch is not None:
+					idx = pal.key_to_index(ch)
+					if idx is not None:
+						pal.add_sample(idx, lab[labels == largest.get("i")].reshape(-1, 3))
 
-			elif ui_mode == "operate":
-				pass
+
+		elif ui_mode == "operate":
+			if k == 27:
+				ui_mode = "exit"
+
+			if k == 9:
+				ui_mode = "setup"
+
+			if largest_match_duration > 2.0:
+				select_bin(pal.name_to_index(largest_match))
+				drop_piece()
+				largest_match_duration = 0.0
 
 
 		elif ui_mode in ["name", "key"]:
