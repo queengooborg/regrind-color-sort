@@ -45,7 +45,7 @@ def main():
 	t_last = time.time()
 	fps_hist = deque(maxlen=30)
 
-	ui_mode = "normal"
+	ui_mode = "setup"
 	input_name = ""
 	input_key = ""
 	settings_ui = SettingsUI(settings)
@@ -73,16 +73,29 @@ def main():
 
 		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}   Total:{labeled+unlabeled}"], pos=(10, 10))
 
-		if ui_mode == "normal":
+		if ui_mode == "setup":
 			put_panel(vis, [
-				"[space] capture BG   [,] settings   [esc] quit",
+				"SETUP MODE",
+				"[space] capture BG   [tab] switch mode   [,] settings   [esc] quit",
 				"[.] new class from largest   [key] add sample to that class"
 			], pos=(10, 50))
 
 			put_panel(vis, [
 				"Palette:",
 				*pal.legend()
-			], pos=(10, 110))
+			], pos=(10, 130))
+		elif ui_mode == "operate":
+			put_panel(vis, [
+				"OPERATION MODE",
+				"[tab] switch mode   [esc] quit"
+			], pos=(10, 50))
+
+			put_banner(vis, "THIS MODE IS NOT YET OPERATIONAL", (0, 0, 255))
+
+			put_panel(vis, [
+				"Palette:",
+				*pal.legend()
+			], pos=(10, 130))
 		if not bg.ready and ui_mode != "exit":
 			put_banner(vis, "BACKGROUND NOT SET   Press [space] on a clean background", (0, 255, 255))
 		if ui_mode in ["name", "key"]:
@@ -94,7 +107,7 @@ def main():
 					f"Name: {input_name}{'_' if ui_mode == "name" else ''}",
 					f"Key: {input_key or pal.auto_key(input_name)}{'_' if ui_mode == "key" else ''}"
 				],
-				pos=(10, 110)
+				pos=(10, 130)
 			)
 		if ui_mode == "exit":
 			put_banner(vis, "Save settings and palette? [y]es/[n]o/[s]ettings only/[p]alette only", (50, 50, 255))
@@ -106,41 +119,49 @@ def main():
 		# Handle keyboard inputs
 		k = cv2.waitKeyEx(1)
 
-		if ui_mode == "normal":
+		if ui_mode in ["setup", "operate"]:
 			if k == 27:
 				ui_mode = "exit"
 
-			if k == ord(' '):
-				bg.init_from(frame)
+			if k == 9:
+				ui_mode = "operate" if ui_mode == "setup" else "setup"
 
-			if k == ord(','):
-				ui_mode = "settings"
+			if ui_mode == "setup":
+				if k == ord(' '):
+					bg.init_from(frame)
 
-			if k == ord('.') and largest is not None:
-				ui_mode = "name"
-				input_name = ""
-				input_key = ""
+				if k == ord(','):
+					ui_mode = "settings"
 
-			if k != 255 and largest is not None:
-				if 32 <= k < 127:
-					ch = chr(k)
-				else:
-					ch = None
-				if ch is not None:
-					idx = pal.key_to_index(ch)
-					if idx is not None:
-						pal.add_sample(idx, lab[labels == largest.get("i")].reshape(-1, 3))
+				if k == ord('.') and largest is not None:
+					ui_mode = "name"
+					input_name = ""
+					input_key = ""
+
+				if k != 255 and largest is not None:
+					if 32 <= k < 127:
+						ch = chr(k)
+					else:
+						ch = None
+					if ch is not None:
+						idx = pal.key_to_index(ch)
+						if idx is not None:
+							pal.add_sample(idx, lab[labels == largest.get("i")].reshape(-1, 3))
+
+			elif ui_mode == "operate":
+				pass
+
 
 		elif ui_mode in ["name", "key"]:
 			if k == 27:
-				ui_mode = "normal"
+				ui_mode = "setup"
 				input_name = ""
 				input_key = ""
 
 			elif k in (13, 10):
 				name_final = input_name if input_name != "" else f"class_{len(pal.colors) + 1}"
 				pal.add_class_from_pixels(name_final, lab[labels == largest.get("i")].reshape(-1, 3))
-				ui_mode = "normal"
+				ui_mode = "setup"
 				input_name = ""
 				input_key = ""
 
@@ -163,7 +184,7 @@ def main():
 		elif ui_mode == "settings":
 			if settings_ui.handle_key(k, cap) == 'exit':
 				pal.settings = settings
-				ui_mode = "normal"
+				ui_mode = "setup"
 
 		elif ui_mode == "exit":
 			if k in (ord('y'), ord('n'), ord('s'), ord('p')):
