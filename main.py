@@ -19,6 +19,9 @@ from lib import *
 
 assert sys.version_info >= (3, 11), "Requires Python 3.11 or newer"
 
+MATCH_DROP_TIME = 2.0
+REJECT_DROP_TIME = 10.0
+
 def main():
 	settings = Settings()
 	pal = Palette(settings)
@@ -51,7 +54,7 @@ def main():
 	settings_ui = SettingsUI(settings)
 
 	largest_match = None
-	largest_match_duration = 0.0
+	time_since_match = 0.0
 
 	cv2.namedWindow("Filament Regrind Color Classifier", cv2.WINDOW_NORMAL)
 
@@ -74,16 +77,13 @@ def main():
 		t_last = t_now
 		fps = sum(fps_hist) / len(fps_hist)
 
-		if ui_mode == "operate" and largest:
-			if largest['match']:
-				if largest_match == largest['match'][0]:
-					largest_match_duration += dt
-				else:
-					largest_match = largest['match'][0]
-					largest_match_duration = 0.0
+		if ui_mode == "operate":
+			match = largest['match'][0] if largest and largest['match'] else False if largest else None
+			if largest_match is match:
+				time_since_match += dt
 			else:
-				largest_match = None
-				largest_match_duration = 0.0
+				largest_match = match
+				time_since_match = 0.0
 
 		put_panel(vis, [f"FPS {fps:.1f}   Labeled:{labeled}  Unlabeled:{unlabeled}   Total:{labeled+unlabeled}"], pos=(10, 10))
 
@@ -105,12 +105,19 @@ def main():
 			], pos=(10, 50))
 
 			if largest_match:
-				remaining_time = 2.0 - largest_match_duration
+				remaining_time = MATCH_DROP_TIME - time_since_match
 
 				if remaining_time <= 0:
 					put_banner(vis, f"{largest_match} selected, dropping into bin...", (255, 255, 0))
 				else:
 					put_banner(vis, f"Selecting {largest_match} in {remaining_time:.2f} seconds...", (255, 255, 0))
+			elif largest:
+				remaining_time = REJECT_DROP_TIME - time_since_match
+
+				if remaining_time <= 0:
+					put_banner(vis, "Dropping into reject bin...", (255, 255, 0))
+				else:
+					put_banner(vis, f"Cannot find a match; rejecting in {remaining_time:.2f} seconds...", (255, 255, 0))
 
 
 			put_panel(vis, [
@@ -145,7 +152,7 @@ def main():
 				ui_mode = "exit"
 
 			if k == 9:
-				largest_match_duration = 0.0
+				time_since_match = 0.0
 				ui_mode = "operate"
 
 			if k == ord(' '):
@@ -177,10 +184,10 @@ def main():
 			if k == 9:
 				ui_mode = "setup"
 
-			if largest_match_duration > 2.0:
-				select_bin(pal.name_to_index(largest_match))
+			if largest and time_since_match > (MATCH_DROP_TIME if largest_match else REJECT_DROP_TIME):
+				select_bin(pal.name_to_index(largest_match) if largest_match else -1)
 				drop_piece()
-				largest_match_duration = 0.0
+				time_since_match = 0.0
 
 
 		elif ui_mode in ["name", "key"]:
