@@ -53,7 +53,7 @@ You'll need to print all of the models in the `models/` folder, most needing to 
 | -------------- | -------- |
 | Bin            | 17       |
 | Bin Holder     | 17       |
-| Flap           | 11       |
+| Flap           | 15       |
 | Flap Connector | 8        |
 | Stage 1 Paths  | 1        |
 | Stage 2 Paths  | 2        |
