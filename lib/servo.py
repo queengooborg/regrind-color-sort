@@ -24,36 +24,37 @@ except ImportError:
 # 90: Center
 # 180: Right
 
-def set_angle(i, angle):
-	if not kit:
-		print(f"Emulation: Setting {i} to {angle}...")
-		return
+class Servos:
+	def __init__(self):
+		set_angle([0, 1, 2, 3, 4, 5], 90)
 
-	print(f"Setting {i} to {angle}...")
-	if type(i) == int:
-		kit.servo[i].angle = angle
-	elif type(i) == list:
-		for _i in list(i):
-			kit.servo[_i].angle = angle
+	def set_angle(self, i, angle):
+		if not kit:
+			print(f"Emulation: Setting {i} to {angle}...")
+			return
 
-def init():
-	set_angle([0, 1, 2, 3, 4, 5], 90)
+		print(f"Setting {i} to {angle}...")
+		if type(i) == int:
+			kit.servo[i].angle = angle
+		elif type(i) == list:
+			for _i in list(i):
+				kit.servo[_i].angle = angle
 
-def select_bin(i):
-	# Bin Count: 16 + Reject
+	def select_bin(self, i):
+		# Bin Count: 16 + Reject
 
-	if i == -1:
-		set_angle(1, 180)
-		return
+		if i == -1:
+			set_angle(1, 180)
+			return
 
-	set_angle(1, 90)
+		set_angle(1, 90)
 
-	set_angle(2, 0 if i < 8 else 180)
-	set_angle(3, 0 if i % 8 < 4 else 180)
-	set_angle(4, 0 if i % 4 < 2 else 180)
-	set_angle(5, 0 if i % 2 < 1 else 180)
+		set_angle(2, 0 if i < 8 else 180)
+		set_angle(3, 0 if i % 8 < 4 else 180)
+		set_angle(4, 0 if i % 4 < 2 else 180)
+		set_angle(5, 0 if i % 2 < 1 else 180)
 
-def drop_piece():
-	set_angle(0, 180)
-	# time.sleep(3)
-	set_angle(0, 90)
+	def drop_piece(self):
+		set_angle(0, 180)
+		# time.sleep(3)
+		set_angle(0, 90)

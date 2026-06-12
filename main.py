@@ -25,7 +25,9 @@ REJECT_DROP_TIME = 10.0
 def main():
 	settings = Settings()
 	pal = Palette(settings)
+	servos = Servos()
 
+	# Initialize camera
 	if Picamera2:
 		cap = Picamera2()
 		cap.configure(cap.create_video_configuration(
@@ -185,8 +187,8 @@ def main():
 				ui_mode = "setup"
 
 			if largest and time_since_match > (MATCH_DROP_TIME if largest_match else REJECT_DROP_TIME):
-				select_bin(pal.name_to_index(largest_match) if largest_match else -1)
-				drop_piece()
+				servos.select_bin(pal.name_to_index(largest_match) if largest_match else -1)
+				servos.drop_piece()
 				time_since_match = 0.0
 
 
