@@ -19,7 +19,7 @@ from lib import *
 
 assert sys.version_info >= (3, 11), "Requires Python 3.11 or newer"
 
-MATCH_DROP_TIME = 2.0
+MATCH_DROP_TIME = 3.0
 REJECT_DROP_TIME = 10.0
 
 def main():
