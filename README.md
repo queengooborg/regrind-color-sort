@@ -39,7 +39,7 @@ The 3D printed parts are designed to fit on the build plate of a Bambu Lab X1 Ca
 
 I recommend the following print settings:
 
-- Material: Any Except TPU, PLA or PETG Recommended
+- Material: Any Except TPU (PLA or PETG Recommended)
 - Layer Height: 0.2
 - Walls: 2
 - Infill: 15%
@@ -76,7 +76,7 @@ Run `install.sh` to install everything.
 The hardware portion is still in the works, so currently, this is a proof-of-concept for the CV side. To use the CV side:
 
 - Position a camera and a light facing down onto a solid, flat surface
-  - Preferably, this should be a uniform color that doesn't match any of your filament scraps
+  - Preferably, the background should be a uniform color that doesn't match any of your filament scraps
 - Press the space bar to identify the background
 - For every color of filament you have...
   - Place a filament scrap on the surface
