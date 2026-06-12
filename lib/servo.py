@@ -9,8 +9,6 @@ try:
 except ImportError:
 	kit = None
 
-# import time
-
 # Servos:
 # 0: Deposit Flap
 # 1: Reject Bin
@@ -56,5 +54,6 @@ class Servos:
 
 	def drop_piece(self):
 		set_angle(0, 180)
-		# time.sleep(3)
+
+	def reset(self):
 		set_angle(0, 90)

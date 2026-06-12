@@ -21,6 +21,7 @@ assert sys.version_info >= (3, 11), "Requires Python 3.11 or newer"
 
 MATCH_DROP_TIME = 3.0
 REJECT_DROP_TIME = 10.0
+RESET_DROP_TIME = 3.0
 
 def main():
 	settings = Settings()
@@ -57,6 +58,7 @@ def main():
 
 	largest_match = None
 	time_since_match = 0.0
+	piece_dropped = False
 
 	cv2.namedWindow("Filament Regrind Color Classifier", cv2.WINDOW_NORMAL)
 
@@ -186,10 +188,18 @@ def main():
 			if k == 9:
 				ui_mode = "setup"
 
-			if largest and time_since_match > (MATCH_DROP_TIME if largest_match else REJECT_DROP_TIME):
-				servos.select_bin(pal.name_to_index(largest_match) if largest_match else -1)
-				servos.drop_piece()
-				time_since_match = 0.0
+			if largest:
+				remaining_time = (MATCH_DROP_TIME if largest_match else REJECT_DROP_TIME) - time_since_match
+
+				if remaining_time <= 0 and not piece_dropped:
+					servos.select_bin(pal.name_to_index(largest_match) if largest_match else -1)
+					servos.drop_piece()
+					piece_dropped = True
+
+				if remaining_time <= RESET_DROP_TIME * -1 and piece_dropped:
+					servos.reset()
+					time_since_match = 0.0
+					piece_dropped = False
 
 
 		elif ui_mode in ["name", "key"]:
