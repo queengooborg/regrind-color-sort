@@ -24,7 +24,7 @@ except ImportError:
 
 class Servos:
 	def __init__(self):
-		set_angle([0, 1, 2, 3, 4, 5], 90)
+		self.set_angle([0, 1, 2, 3, 4, 5], 90)
 
 	def set_angle(self, i, angle):
 		if not kit:
